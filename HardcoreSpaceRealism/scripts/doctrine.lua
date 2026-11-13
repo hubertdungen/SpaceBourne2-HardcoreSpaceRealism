@@ -1,0 +1,116 @@
+--[[
+  Enemy doctrine by tier (Hardcore Space Realism 0.1.0).
+
+  The game's enemy fighters and frigates (Base_Frigate_C) fly a "close pass": when the target is nearer than
+  CloseTrueBeheviur x RangeMultipler they set Close? = true, double their speed, halve their turning and dive at a
+  point 400 m from the target, until they are CloseBoolDistance away again. Every enemy does it, pirates and
+  elite crews alike.
+
+  Here the low tiers (pirates, and ranks up to LowRank) never start that pass: their CloseTrueBeheviur is set to 0,
+  so they keep flying their normal attack moves at normal speed (the game's own band AttackDistMin..AttackDistMax),
+  and they turn a little slower (sloppy: ShipBaseTurnSpeed x SloppyTurn). Higher ranks of the military factions
+  are left as the game has them.
+
+  Only constants are written: CloseTrueBeheviur is never written by the game, ShipBaseTurnSpeed is written when the
+  game calculates the ship's stats (so each ship is checked again every scan and re-applied if the game changed it).
+  Nothing the AI rewrites every cycle (SpeedMultipler, TurnSpeedMultipler, RangeMultipler...) is touched.
+  Cost: one FindAllOf per scan on the gametick timer; a few property reads per ship; writes only when needed.
+]]
+
+local D = {}
+
+local SHIP = "Base_Frigate_C"
+local AI_ENEMY = 0
+local FACTION_PIRATES = 3
+
+local function valid(o)
+    if o == nil then return false end
+    local ok, v = pcall(function() return o:IsValid() end)
+    return ok and v == true
+end
+
+local function prop(o, name, default)
+    local ok, v = pcall(function() return o[name] end)
+    if ok and v ~= nil then return v end
+    return default
+end
+
+-- a destroyed actor stays valid until garbage collection and reports the origin (see podcatch.lua)
+local function alive(o)
+    if not valid(o) then return false end
+    local ok, dying = pcall(function() return o:IsActorBeingDestroyed() end)
+    if ok and dying == true then return false end
+    local okL, l = pcall(function() return o:K2_GetActorLocation() end)
+    if okL and l and l.X == 0 and l.Y == 0 and l.Z == 0 then return false end
+    return true
+end
+
+local function same(a, b) return math.abs((a or 0) - (b or 0)) <= 0.01 + math.abs(b or 0) * 1e-4 end
+
+--- start(GT, cfg, log, warn): cfg = { Enabled, LowRank, SloppyTurn, Interval }
+function D.start(GT, cfg, log, warn)
+    if not cfg.Enabled then log("enemy doctrine off in config.lua") return end
+    local lowRank = math.floor(tonumber(cfg.LowRank) or 1)
+    local sloppy = math.max(0.3, math.min(1.0, tonumber(cfg.SloppyTurn) or 0.85))
+    local seen = {}  -- full name -> { turnBase = ShipBaseTurnSpeed before our write, turnSet = what we wrote }
+    local touched, lastCount = 0, -1
+
+    local function isLowTier(ship)
+        if prop(ship, "Faction", -1) == FACTION_PIRATES then return true end
+        local rank = prop(ship, "Enemy_Rank", 99)
+        return rank <= lowRank
+    end
+
+    local function tick()
+        local ships = FindAllOf(SHIP)
+        if not ships or #ships == 0 then return end
+        local cur = {}
+        for _, s in ipairs(ships) do
+            if alive(s) and prop(s, "AITypes", -1) == AI_ENEMY and prop(s, "Dead?", false) ~= true
+                and prop(s, "Creature?", false) ~= true and prop(s, "Non_combat_Ship", false) ~= true
+                and prop(s, "CharacterShooter?", false) ~= true and isLowTier(s) then
+                local okN, name = pcall(function() return s:GetFullName() end)
+                if okN then
+                    cur[name] = true
+                    local rec = seen[name]
+                    local close0 = prop(s, "CloseTrueBeheviur", 0)
+                    local turn = prop(s, "ShipBaseTurnSpeed", 0)
+                    if rec == nil then rec = { turnBase = nil, turnSet = nil }; seen[name] = rec end
+                    local did = {}
+                    if close0 > 0 then
+                        local ok = pcall(function() s.CloseTrueBeheviur = 0 end)
+                        if ok then did[#did + 1] = string.format("close pass off (was %.0f)", close0) end
+                    end
+                    -- turn: first time, or the game recalculated the ship's stats and replaced our value
+                    if turn > 0 and (rec.turnSet == nil or not same(turn, rec.turnSet)) then
+                        rec.turnBase = turn
+                        local ok = pcall(function() s.ShipBaseTurnSpeed = turn * sloppy end)
+                        if ok then
+                            rec.turnSet = turn * sloppy
+                            did[#did + 1] = string.format("turn %.1f -> %.1f", turn, turn * sloppy)
+                        end
+                    end
+                    if #did > 0 then
+                        touched = touched + 1
+                        log(string.format("doctrine %s faction %s rank %s level %s: %s",
+                            (name:gsub("^.*%.", "")), tostring(prop(s, "Faction", "?")), tostring(prop(s, "Enemy_Rank", "?")),
+                            tostring(prop(s, "Level", "?")), table.concat(did, ", ")))
+                    end
+                end
+            end
+        end
+        for name in pairs(seen) do if not cur[name] then seen[name] = nil end end
+        local n = 0
+        for _ in pairs(cur) do n = n + 1 end
+        if n ~= lastCount then lastCount = n; log("doctrine: " .. n .. " low-tier enemy ships tracked, " .. touched .. " changes so far") end
+    end
+
+    local interval = math.max(1, cfg.Interval or 3)
+    GT.every(interval, function()
+        local ok, err = pcall(tick)
+        if not ok then warn("doctrine tick: " .. tostring(err)) end
+    end)
+    log(string.format("enemy doctrine on: low tier = pirates or rank <= %d, turn x%.2f, every %.1f s", lowRank, sloppy, interval))
+end
+
+return D
