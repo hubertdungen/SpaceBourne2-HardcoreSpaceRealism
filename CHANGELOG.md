@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.0 (not released yet)
+
+Smarter allied ships, **off by default** until tested in the game (`AlliedShips.Enabled = true` to try them).
+
+- Retreat when badly damaged: an allied fighter or frigate below 25 % health (armor + shield) sets the game's own
+  "return to spawn" flag and flies back to its root (your ship when it has none). It rejoins above 60 %, or after
+  `MaxSeconds`, then waits 60 s before it may retreat again. Ships more than `MaxDistance` from their root stay in the
+  fight (the game moves a returning ship beyond 4.6 km onto its root).
+- Shared target: allies outside a squad attack your locked target (the game's own
+  `SetOrderAttackTargetFromTacticMap`), once per new target.
+- Never touches your ship, enemies, aliens, civilians, cargo, drones, capital, command and mother ships.
+- New files `allies.lua` and `shiputil.lua` (shared read-only helpers and one ship scan per second).
+- Settings in `config.lua`: `AlliedShips.*`.
+
 ## 0.1.0 (not released yet)
 
 First version.

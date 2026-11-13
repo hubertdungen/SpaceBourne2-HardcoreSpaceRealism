@@ -38,7 +38,7 @@ faction account would need a new stat and is not done.
 (the first catch clears the `FreePod` tag), but two mods doing the same work would double-count slots. To
 check in the game: which wins when `mods.txt` says `: 0` and an `enabled.txt` exists.
 
-## 3. Smarter allied ships (researched)
+## 3. Smarter allied ships (in 0.2.0, off by default, not tested in the game)
 
 - All NPC ships are `Master_Enemy_C : Pawn`; the flight AI is Blueprint in `Base_Frigate_C` (fighters and
   frigates), so it can be read and steered from Lua.
@@ -51,6 +51,27 @@ check in the game: which wins when `mods.txt` says `: 0` and an `enabled.txt` ex
 - Shared target for allies outside a squad: `Master_Enemy:SetOrderAttackTargetFromTacticMap(Target)` sets
   `MainTarget` and `MainTargetSettedBy Order`.
 - Not read: `Tacticle_Spawn_System`, the faction fleet-battle manager that owns "general" ships.
+- **In the code (`allies.lua`)**: every `Interval` s, on the shared one-second scan of `Base_Frigate_C`
+  (`shiputil.lua`), for each living ally (`AITypes` 1; `ShipType` 0 Frigate, 1 Fly or 12 HeavyFighter; not a creature,
+  non-combat ship, character shooter or fleet `General?`):
+  - **Retreat** uses `Master_Enemy.ReturnToSpawn`, the flag the game itself sets when a ship strays from its
+    `SpawnRoot` (3.5 km, 5.5 km when the root is the player, 140 m for a low squad soldier; read in the
+    Blueprint). While it is set the AI flies to `SpawnRoot` (the player's pawn when invalid), clears the flag within
+    50 m, and moves a ship that is 4.6 km or more away onto the root. So: set the flag below `Retreat.Below`
+    (health = `(CurrentArmor + CurrentShield) / (MaxArmor + MaxShield)`) when the ship is within `MaxDistance`
+    (default 3 km) of its root (no teleport); set it again if the game cleared it on arrival; clear it above
+    `ResumeAbove`, or after `MaxSeconds` followed by a 60 s pause. `ChangeState(3)` was not used: the state
+    switch on `AIState` is native and was not readable; `ChangeState` only stores the state and starts a state timer.
+  - **Shared target**: `SetOrderAttackTargetFromTacticMap(Target)` (read: sets `MainTarget`, calls `TargetIsChanged`,
+    sets `MainTargetSettedBy Order`) with the player's `LockedTarget` (an enemy, `AITypes` 0), for allies with
+    `HasSquad?` false, not retreating, within `ShareTarget.Range` of the player, once per new target.
+  - Never: the player's ship (other class), enemies, aliens, civilians, cargo, drones, capital, command and mother
+    ships.
+- **Not verified in the game**: that setting `ReturnToSpawn` from Lua has the effect the Blueprint suggests; what a
+  ship inside a squad does (the formation code checks the flag, the distance check is skipped for squads);
+  whether `MainTargetSettedBy Order` keeps the target against retargeting; whether allies repair armor at all
+  (shield recharge is certain, so the resume threshold may need `MaxSeconds`); what the player sees when an ally
+  idles at its root. Ships that carry the flag when the mod stops are left as they are (the game clears it).
 
 ## 4. Enemy ships by tier (in 0.1.0, off by default, not tested in the game)
 
@@ -92,7 +113,8 @@ check in the game: which wins when `mods.txt` says `: 0` and an `enabled.txt` ex
 
 - 0.1.0: pod catchers and the guard; then enemy doctrine by tier after two in-game checks (ram or strafing
   pass; do the once-written values stick).
-- 0.2.0: ally retreat and shared target. 0.3.0: NPC hull states; player damage only after `CalculateStats`.
+- 0.2.0 (in, off by default): ally retreat and shared target. 0.3.0: NPC hull states; player damage only after
+  `CalculateStats`.
 
 ## 7. Test plan (game launches only when allowed)
 

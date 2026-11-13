@@ -6,9 +6,9 @@ A [UE4SS](https://github.com/UE4SS-RE/RE-UE4SS) Lua mod: the space counterpart o
 [Hardcore Tactical Realism](https://github.com/hubertdungen/SpaceBourne2-HardcoreTacticalRealism).
 Everything is on by default, automatic, with no keys and no menus. Part of the SpaceBourne 2 realism set.
 
-> **Status: 0.1.0 (first release).** The ally pod catchers are on by default. The enemy doctrine is in
-> but **off by default** until it has been tested in the game. Smarter allied ships and ship damage that
-> matters are planned. [DESIGN.md](DESIGN.md) has the research.
+> **Status: 0.2.0.** The ally pod catchers are on by default. The enemy doctrine and the smarter allied
+> ships are in but **off by default** until they have been tested in the game (each has its own switch in
+> `config.lua`). Ship damage that matters is planned. [DESIGN.md](DESIGN.md) has the research.
 
 ## What it does
 
@@ -24,9 +24,16 @@ ranks up to `LowRank`) never do that, so they keep shooting from their normal at
 turn a little slower (sloppy). Higher ranks of the military factions fly as the game has them. Switch it
 on with `EnemyDoctrine.Enabled = true`; it becomes the default once it has been tested.
 
-*Planned, not in 0.1.0:*
-- **Smarter allied ships:** pull back when badly damaged, and fleet members that fire at one target.
-- **Ship damage that matters:** a ship that has lost hull flies, turns and shoots worse.
+**Smarter allied ships (0.2.0, off by default).** In the game an allied fighter or frigate fights until it
+dies. With this on, an ally whose armor and shield are below 25 % pulls back with the game's own "return to
+spawn" flag (it flies to where it came from, or to your ship, and the game stops it there). It rejoins when
+it is above 60 % again (shields recharge by themselves) or after two minutes, whichever comes first. Allies
+that are not in a squad also attack the target you have locked, once per new target. Never touched: your
+ship, enemies, aliens, civilians, cargo, drones, capital ships, command and mother ships. Switch it on with
+`AlliedShips.Enabled = true`; it becomes the default once it has been tested.
+
+*Planned, not yet in:*
+- **Ship damage that matters:** a ship that has lost hull flies and turns worse and recharges its shield slower.
 
 ## Settings
 
@@ -42,6 +49,15 @@ Edit `HardcoreSpaceRealism/scripts/config.lua`, save, restart the game.
 | `EnemyDoctrine.LowRank` | `1` | Enemy rank up to this is low tier (pirates always are). |
 | `EnemyDoctrine.SloppyTurn` | `0.85` | Low-tier turn speed multiplier (1 = unchanged). |
 | `EnemyDoctrine.Interval` | `3.0` | Seconds between scans. |
+| `AlliedShips.Enabled` | `false` | Allies retreat when badly damaged and attack your locked target. |
+| `AlliedShips.Retreat.Enabled` | `true` | Retreat part of the above. |
+| `AlliedShips.Retreat.Below` | `0.25` | Health ratio (armor + shield) under which an ally pulls back. |
+| `AlliedShips.Retreat.ResumeAbove` | `0.6` | It rejoins the fight above this. |
+| `AlliedShips.Retreat.MaxSeconds` | `120` | It rejoins after this long whatever its health (then waits 60 s). |
+| `AlliedShips.Retreat.MaxDistance` | `3000` | Metres from its root. Farther away it stays in the fight. |
+| `AlliedShips.ShareTarget.Enabled` | `true` | Allies outside a squad attack your locked target. |
+| `AlliedShips.ShareTarget.Range` | `20000` | Metres from you: only allies this close are told. |
+| `AlliedShips.Interval` | `3.0` | Seconds between scans. |
 | `Debug` | `false` | Writes what the mod does to `hardcorespacerealism.log`. |
 
 ## Works with Bigger Armies
@@ -69,7 +85,9 @@ it, switches the mods you tick on and keeps them updated.
   game's own catcher drone animation runs under your ship.
 - A catch can complete the mission objective "catch a pod" (the game's own rule for any catch).
 - The pod catchers were tested with scripted allies and pods (in Bigger Armies 0.2.0, same code); a real fleet
-  fight is not tested yet. The enemy doctrine is not tested in the game yet.
+  fight is not tested yet. The enemy doctrine and the smarter allied ships are not tested in the game yet
+  (that is why they are off by default).
+- Retreat uses the game's own "return to spawn" flag. Whether a ship inside a squad follows it is not known yet.
 
 ## Compatibility
 

@@ -2,12 +2,13 @@
   Hardcore Space Realism for SpaceBourne 2 (UE4SS Lua mod)
   Part of the SpaceBourne 2 realism set: the space counterpart of Hardcore Tactical Realism.
   0.1.0: the ally pod catchers (podcatch.lua, moved here from Bigger Armies 0.2.0, tested there) and the enemy
-  doctrine by tier (doctrine.lua, OFF by default until it has been tested in game). Smarter allied ships and
-  ship damage that matters follow (DESIGN.md has the research and the plan).
+  doctrine by tier (doctrine.lua, OFF by default until it has been tested in game).
+  0.2.0: smarter allied ships (allies.lua: retreat when badly damaged, shared target), OFF by default until tested.
+  shiputil.lua is the read-only helper set for the ship modules. DESIGN.md has the research and the plan.
   Timed work runs on the shared gametick.lua (no LoopAsync / ExecuteWithDelay / ExecuteAsync, see its header).
 ]]
 
-local VERSION = "0.1.0"
+local VERSION = "0.2.0"
 
 -- Folder and log ---------------------------------------------------------------------------------------
 local DIR
@@ -123,4 +124,18 @@ if docCfg.Enabled then
     end
 end
 
-warn("Hardcore Space Realism " .. VERSION .. " loaded: ally pod catchers " .. podsOn .. ", enemy doctrine " .. docOn)
+local allyCfg = type(cfg.AlliedShips) == "table" and cfg.AlliedShips or {}
+if allyCfg.Enabled == nil then allyCfg.Enabled = false end
+local allyOn = "off"
+if allyCfg.Enabled then
+    local okA, A = pcall(require, "allies")
+    if okA then
+        local okS, err = pcall(A.start, GT, allyCfg, log, warn)
+        if okS then allyOn = "on" else warn("allies.lua: " .. tostring(err)) end
+    else
+        warn("allies.lua: " .. tostring(A))
+    end
+end
+
+warn("Hardcore Space Realism " .. VERSION .. " loaded: ally pod catchers " .. podsOn .. ", enemy doctrine " .. docOn
+    .. ", allied ships " .. allyOn)

@@ -28,7 +28,29 @@ return {
         Interval = 3.0,     -- seconds between scans
     },
 
-    -- Planned, not in 0.1.0 (see DESIGN.md): AlliedShips (retreat), ShipDamage (hull states).
+    -- Allied fighters and frigates (not the capital, cargo or command ships): retreat when badly damaged, and
+    -- fight the target you have locked. The game has no retreat: a ship fights until it dies. Retreat uses the
+    -- game's own "return to spawn" flag, so the ship flies back to where it came from (your ship when it has no
+    -- root) and the game stops it there. Health = armor + shield against their maximum.
+    -- OFF in 0.2.0: written from the game's own logic but not tested in the game yet. Switch it on to try it
+    -- (and tell me how it goes); it will be on by default once it has been tested.
+    AlliedShips = {
+        Enabled = false,
+        Interval = 3.0,        -- seconds between scans
+        Retreat = {
+            Enabled = true,
+            Below = 0.25,        -- health ratio under which an ally pulls back
+            ResumeAbove = 0.6,   -- it rejoins the fight above this (shields recharge by themselves)
+            MaxSeconds = 120,    -- it rejoins after this long whatever its health, then waits 60 s before it may retreat again
+            MaxDistance = 3000,  -- metres from its root; farther than that it stays in the fight (the game moves a returning ship beyond 4.6 km onto its root)
+        },
+        ShareTarget = {
+            Enabled = true,      -- allies outside a squad attack the target you have locked (once per new target)
+            Range = 20000,       -- metres: only allies this close to you are told
+        },
+    },
+
+    -- Planned, not yet in (see DESIGN.md): ShipDamage (hull states, 0.3.0).
 
     -- true writes what the mod does to hardcorespacerealism.log (in the mod folder).
     Debug = false,

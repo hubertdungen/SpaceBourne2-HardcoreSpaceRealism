@@ -2,7 +2,7 @@
 
 A [url=https://github.com/UE4SS-RE/RE-UE4SS]UE4SS[/url] Lua mod: the space counterpart of [url=https://github.com/hubertdungen/SpaceBourne2-HardcoreTacticalRealism]Hardcore Tactical Realism[/url]. Everything is on by default, automatic, with no keys and no menus. Part of the SpaceBourne 2 realism set.
 
-[b]Status: 0.1.0 (first release).[/b] The ally pod catchers are on by default. The enemy doctrine is in > but [b]off by default[/b] until it has been tested in the game. Smarter allied ships and ship damage that > matters are planned. [url=https://github.com/hubertdungen/SpaceBourne2-HardcoreSpaceRealism/blob/main/DESIGN.md]DESIGN.md[/url] has the research.
+[b]Status: 0.2.0.[/b] The ally pod catchers are on by default. The enemy doctrine and the smarter allied ships are in but [b]off by default[/b] until they have been tested in the game (each has its own switch in config.lua). Ship damage that matters is planned. [url=https://github.com/hubertdungen/SpaceBourne2-HardcoreSpaceRealism/blob/main/DESIGN.md]DESIGN.md[/url] has the research.
 
 [line]
 [size=5][b]What it does[/b][/size]
@@ -11,10 +11,11 @@ A [url=https://github.com/UE4SS-RE/RE-UE4SS]UE4SS[/url] Lua mod: the space count
 
 [b]Enemy doctrine by tier (0.1.0, off by default).[/b] In the game every enemy fighter and frigate ends its run with a "close pass": it doubles its speed and dives at you. With this on, the low tiers (pirates, and ranks up to LowRank) never do that, so they keep shooting from their normal attack distance, and they turn a little slower (sloppy). Higher ranks of the military factions fly as the game has them. Switch it on with EnemyDoctrine.Enabled = true; it becomes the default once it has been tested.
 
-[i]Planned, not in 0.1.0:[/i]
+[b]Smarter allied ships (0.2.0, off by default).[/b] In the game an allied fighter or frigate fights until it dies. With this on, an ally whose armor and shield are below 25 % pulls back with the game's own "return to spawn" flag (it flies to where it came from, or to your ship, and the game stops it there). It rejoins when it is above 60 % again (shields recharge by themselves) or after two minutes, whichever comes first. Allies that are not in a squad also attack the target you have locked, once per new target. Never touched: your ship, enemies, aliens, civilians, cargo, drones, capital ships, command and mother ships. Switch it on with AlliedShips.Enabled = true; it becomes the default once it has been tested.
+
+[i]Planned, not yet in:[/i]
 [list]
-[*][b]Smarter allied ships:[/b] pull back when badly damaged, and fleet members that fire at one target.
-[*][b]Ship damage that matters:[/b] a ship that has lost hull flies, turns and shoots worse.
+[*][b]Ship damage that matters:[/b] a ship that has lost hull flies and turns worse and recharges its shield slower.
 [/list]
 
 [line]
@@ -23,15 +24,24 @@ A [url=https://github.com/UE4SS-RE/RE-UE4SS]UE4SS[/url] Lua mod: the space count
 Edit HardcoreSpaceRealism/scripts/config.lua, save, restart the game.
 
 [list]
-[*][b]Enabled[/b]: true (Master switch.)
-[*][b]PodCatchers.Enabled[/b]: true (Allied ships catch free pods.)
-[*][b]PodCatchers.Range[/b]: 5000 (Metres. An ally this close to a pod, and nearer than you, catches it.)
-[*][b]PodCatchers.Interval[/b]: 2.5 (Seconds between checks.)
-[*][b]EnemyDoctrine.Enabled[/b]: false (Low-tier enemies skip the close pass and turn slower.)
-[*][b]EnemyDoctrine.LowRank[/b]: 1 (Enemy rank up to this is low tier (pirates always are).)
-[*][b]EnemyDoctrine.SloppyTurn[/b]: 0.85 (Low-tier turn speed multiplier (1 = unchanged).)
-[*][b]EnemyDoctrine.Interval[/b]: 3.0 (Seconds between scans.)
-[*][b]Debug[/b]: false (Writes what the mod does to hardcorespacerealism.log.)
+[*][b]Enabled[/b]: true - Master switch.
+[*][b]PodCatchers.Enabled[/b]: true - Allied ships catch free pods.
+[*][b]PodCatchers.Range[/b]: 5000 - Metres. An ally this close to a pod, and nearer than you, catches it.
+[*][b]PodCatchers.Interval[/b]: 2.5 - Seconds between checks.
+[*][b]EnemyDoctrine.Enabled[/b]: false - Low-tier enemies skip the close pass and turn slower.
+[*][b]EnemyDoctrine.LowRank[/b]: 1 - Enemy rank up to this is low tier (pirates always are).
+[*][b]EnemyDoctrine.SloppyTurn[/b]: 0.85 - Low-tier turn speed multiplier (1 = unchanged).
+[*][b]EnemyDoctrine.Interval[/b]: 3.0 - Seconds between scans.
+[*][b]AlliedShips.Enabled[/b]: false - Allies retreat when badly damaged and attack your locked target.
+[*][b]AlliedShips.Retreat.Enabled[/b]: true - Retreat part of the above.
+[*][b]AlliedShips.Retreat.Below[/b]: 0.25 - Health ratio (armor + shield) under which an ally pulls back.
+[*][b]AlliedShips.Retreat.ResumeAbove[/b]: 0.6 - It rejoins the fight above this.
+[*][b]AlliedShips.Retreat.MaxSeconds[/b]: 120 - It rejoins after this long whatever its health (then waits 60 s).
+[*][b]AlliedShips.Retreat.MaxDistance[/b]: 3000 - Metres from its root. Farther away it stays in the fight.
+[*][b]AlliedShips.ShareTarget.Enabled[/b]: true - Allies outside a squad attack your locked target.
+[*][b]AlliedShips.ShareTarget.Range[/b]: 20000 - Metres from you: only allies this close are told.
+[*][b]AlliedShips.Interval[/b]: 3.0 - Seconds between scans.
+[*][b]Debug[/b]: false - Writes what the mod does to hardcorespacerealism.log.
 [/list]
 
 [line]
@@ -57,7 +67,8 @@ Bigger Armies 0.2.0 had the same pod catchers. If it is installed and on with it
 [list]
 [*]Pod catching uses the game's own CatchByMother call, so the pod flies to the allied ship and the game's own catcher drone animation runs under your ship.
 [*]A catch can complete the mission objective "catch a pod" (the game's own rule for any catch).
-[*]The pod catchers were tested with scripted allies and pods (in Bigger Armies 0.2.0, same code); a real fleet fight is not tested yet. The enemy doctrine is not tested in the game yet.
+[*]The pod catchers were tested with scripted allies and pods (in Bigger Armies 0.2.0, same code); a real fleet fight is not tested yet. The enemy doctrine and the smarter allied ships are not tested in the game yet (that is why they are off by default).
+[*]Retreat uses the game's own "return to spawn" flag. Whether a ship inside a squad follows it is not known yet.
 [/list]
 
 [line]
