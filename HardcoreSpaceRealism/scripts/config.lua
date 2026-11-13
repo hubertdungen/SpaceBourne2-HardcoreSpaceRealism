@@ -50,7 +50,25 @@ return {
         },
     },
 
-    -- Planned, not yet in (see DESIGN.md): ShipDamage (hull states, 0.3.0).
+    -- Ship damage that matters: the game has one damage model (shield, then armor), so a ship's state comes from its
+    -- health ratio (armor + shield against their maximum). The deeper the damage, the slower it flies and turns and
+    -- the slower its shield recharges. Each stage is written once when it is crossed (never on every scan), to
+    -- constants the game computes once per ship. Fighters and frigates only, enemies and allies; never your ship,
+    -- aliens, civilians, cargo, drones or capital ships. Your own ship's damage is not touched.
+    -- OFF in 0.3.0: not tested in the game yet. Switch it on to try it (and tell me how it goes).
+    ShipDamage = {
+        Enabled = false,
+        Interval = 3.0,   -- seconds between scans
+        Enemies = true,
+        Allies = true,
+        -- Below = health ratio under which the stage applies; Speed, Turn, Shield = multipliers (1 = unchanged).
+        -- The deepest stage reached applies (they do not stack). Going back up needs the threshold + 5 %.
+        Stages = {
+            { Below = 0.66, Speed = 0.85, Turn = 0.85, Shield = 1.0 },
+            { Below = 0.50, Speed = 0.85, Turn = 0.85, Shield = 0.5 },
+            { Below = 0.33, Speed = 0.65, Turn = 0.65, Shield = 0.5 },
+        },
+    },
 
     -- true writes what the mod does to hardcorespacerealism.log (in the mod folder).
     Debug = false,

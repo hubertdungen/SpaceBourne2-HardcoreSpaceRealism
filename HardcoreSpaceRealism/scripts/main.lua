@@ -4,11 +4,13 @@
   0.1.0: the ally pod catchers (podcatch.lua, moved here from Bigger Armies 0.2.0, tested there) and the enemy
   doctrine by tier (doctrine.lua, OFF by default until it has been tested in game).
   0.2.0: smarter allied ships (allies.lua: retreat when badly damaged, shared target), OFF by default until tested.
-  shiputil.lua is the read-only helper set for the ship modules. DESIGN.md has the research and the plan.
+  0.3.0: NPC hull states (hull.lua: engines, turning and shield recharge drop with the hull), OFF by default until
+  tested. doctrine.lua and hull.lua share shipmods.lua (one record of base values per ship); shiputil.lua is the
+  read-only helper set for the ship modules. DESIGN.md has the research and the plan.
   Timed work runs on the shared gametick.lua (no LoopAsync / ExecuteWithDelay / ExecuteAsync, see its header).
 ]]
 
-local VERSION = "0.2.0"
+local VERSION = "0.3.0"
 
 -- Folder and log ---------------------------------------------------------------------------------------
 local DIR
@@ -137,5 +139,21 @@ if allyCfg.Enabled then
     end
 end
 
+-- For tests only (read by the dev console in the test kit; nothing in the mod uses it).
+HSRTest = { version = VERSION, MODS = MODS, baHasPodCatchers = baHasPodCatchers }
+
+local hullCfg = type(cfg.ShipDamage) == "table" and cfg.ShipDamage or {}
+if hullCfg.Enabled == nil then hullCfg.Enabled = false end
+local hullOn = "off"
+if hullCfg.Enabled then
+    local okH, H = pcall(require, "hull")
+    if okH then
+        local okS, err = pcall(H.start, GT, hullCfg, log, warn)
+        if okS then hullOn = "on" else warn("hull.lua: " .. tostring(err)) end
+    else
+        warn("hull.lua: " .. tostring(H))
+    end
+end
+
 warn("Hardcore Space Realism " .. VERSION .. " loaded: ally pod catchers " .. podsOn .. ", enemy doctrine " .. docOn
-    .. ", allied ships " .. allyOn)
+    .. ", allied ships " .. allyOn .. ", ship damage " .. hullOn)

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.0 (not released yet)
+
+NPC hull states, **off by default** until tested in the game (`ShipDamage.Enabled = true` to try them).
+
+- A ship's health (armor + shield against their maximum) sets a stage: below 66 % engines and turning x0.85, below 50 %
+  shield recharge x0.5, below 33 % engines and turning x0.65 (all in `config.lua`). Written once per stage change to
+  `ShipBaseSpeed`, `ShipBaseTurnSpeed` and `ShieldRechargeRate`, constants the game computes once per ship; if the game
+  computes them again the stage is applied to the new value. Going back up (shields recharge) needs the threshold + 5 %.
+- Fighters and frigates, enemies and allies. Never your ship, aliens, civilians, cargo, drones or capital ships.
+- No hooks (the health is polled on the timer, not on every hit). Not locational: the game has no engine or weapon parts.
+- New `hull.lua` and `shipmods.lua`. `shipmods.lua` keeps one record per ship (the game's base values and one multiplier
+  per source) and is now also used by the enemy doctrine for its turn speed, so the doctrine and the hull states
+  cannot drift on each other's values.
+- Settings in `config.lua`: `ShipDamage.*`.
+
 ## 0.2.0 (not released yet)
 
 Smarter allied ships, **off by default** until tested in the game (`AlliedShips.Enabled = true` to try them).

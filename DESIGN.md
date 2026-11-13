@@ -13,7 +13,8 @@ tried in the game), **unknown**.
   Timed work runs on the shared `gametick.lua` 1.1, pumped from the player's HUD draw. Copy it unchanged.
 - No per-frame calls to functions with out-parameters (they leak in the UE4SS registry). Scans
   (`FindAllOf`) only on the timer, never in a hook.
-- Everything is on by default, automatic, with its own switch in `config.lua`.
+- Everything is on by default, automatic, with its own switch in `config.lua`; a new part ships OFF until it has
+  been tested in the game (0.1.0 doctrine, 0.2.0 allied ships, 0.3.0 ship damage), then it is switched on.
 - Never write a game value the game rewrites every cycle; write once the values it computes once.
 
 ## 2. Ally pod catchers (done)
@@ -97,7 +98,7 @@ check in the game: which wins when `mods.txt` says `: 0` and an `enabled.txt` ex
   what the player sees as a rush. The first test launch (2026-11-13) did not get past the main menu, so the
   doctrine ships OFF until the checks in section 7 pass.
 
-## 5. Ship damage that matters (researched)
+## 5. Ship damage that matters (NPC hull states in 0.3.0, off by default, not tested in the game; player ship researched only)
 
 - Game model: shield, then armor, by damage type (Bullet, Laser, Missile), crit, DoT, slow, blind, all in
   `Damage_Component:Damage1`. No engine, weapon or shield part. Only capital ships have real parts: left alone.
@@ -107,22 +108,51 @@ check in the game: which wins when `mods.txt` says `: 0` and an `enabled.txt` ex
 - Player ship: damage arrives in `ReceiveAnyDamage` (no hit location, only the causer). Flags exist
   (`EngineOff?`, `DisableWeapons?`, thrust and speed multipliers) but which ones `CalculateStats` recomputes is
   unchecked: no player-ship writes before that is read.
-- Do not hook `Damage1` or `ReceiveAnyDamage` (they run per hit).
+- Do not hook `Damage1` or `ReceiveAnyDamage` (they run per hit): poll on the timer instead.
+- **In the code (`hull.lua`, `shipmods.lua`)**: on the shared ship scan, for living enemy and allied fighters and
+  frigates (`shiputil.kind`: `ShipType` 0, 1 or 12, not aliens, creatures, non-combat, shooters, generals), health =
+  `(CurrentArmor + CurrentShield) / (MaxArmor + MaxShield)` (skipped while the maxima are 0). Stages from
+  `ShipDamage.Stages` (default below 66 %: speed and turn x0.85; below 50 %: and shield recharge x0.5; below 33 %: speed
+  and turn x0.65), the deepest reached applies, hysteresis 5 % on the way back up. A stage is a multiplier on the
+  constants `ShipBaseSpeed`, `ShipBaseTurnSpeed`, `ShieldRechargeRate`. Why these three: the game writes them in
+  `CalculateStats` (`ShipBaseSpeed` and `ShipBaseTurnSpeed` from the rank table, `ShieldRechargeRate` per rank), the
+  AI derives its per-cycle values from them, and `ShieldRechargeRate x 0.001` is read at each shield recharge
+  step. `TurretFireRate` was left out: which direction is "worse" is unknown.
+  - `shipmods.lua` is the one place that writes them: per ship the base values as the game wrote them, what we last
+    wrote, and one multiplier per source (`doctrine`, `hull`). The value written is base x all multipliers; a value
+    that is not what we last wrote is taken as the game's new base (the game recalculated). A ship that has had a stage
+    is re-checked every scan (a few reads), a ship that never had one is never touched.
+  - Verified offline only (mock objects, 35 checks): stage transitions, one write per crossing, stable over scans,
+    recalculation re-applied, doctrine and hull together, repair puts the base back, capitals and aliens untouched.
+- **Not verified in the game**: that a write to `ShipBaseSpeed` / `ShipBaseTurnSpeed` changes how the ship flies
+  (the AI derives `MaxSpeed` and the turn speed from them each cycle: read, not seen); that a write to
+  `ShieldRechargeRate` slows the recharge; whether `CalculateStats` runs again during a ship's life (the call sites
+  read: ship setup, and `UpdateShipAIType`) and whether our re-apply copes; what the player notices at 15 % less speed.
 
 ## 6. Plan
 
 - 0.1.0: pod catchers and the guard; then enemy doctrine by tier after two in-game checks (ram or strafing
   pass; do the once-written values stick).
-- 0.2.0 (in, off by default): ally retreat and shared target. 0.3.0: NPC hull states; player damage only after
-  `CalculateStats`.
+- 0.2.0 (in, off by default): ally retreat and shared target. 0.3.0 (in, off by default): NPC hull states. Later:
+  damage to the player's ship only after `CalculateStats` has been read. Each new part ships OFF until it has been
+  tested in the game, then it is switched on by default.
 
 ## 7. Test plan (game launches only when allowed)
 
-One launch, a copy of a space save in a test slot, this mod alone plus the dev console:
-1. Pods: the eight Bigger Armies cases; Bigger Armies 0.2.0 on (this mod stays out, logs once), its
-   `PodCatchers` off (this mod catches).
+One launch covers 0.1.0, 0.2.0 and 0.3.0: a copy of a space save in a test slot, this mod alone plus the dev
+console, every new part switched on in the test copy of `config.lua` (they are off by default in the repo). The
+test kit (outside this repository) drives it with scripted ships; `HSRTest` is a global the mod sets for it.
+1. Pods: the eight Bigger Armies cases; the Bigger Armies guard with the real `Mods` path (a Bigger Armies 0.2.0
+   snapshot sits in the test copy, off: the guard is called with `mods.txt` saying `BiggerArmies : 1`, then with its
+   `PodCatchers` off; booting with it on is covered offline, 7 mock folders, and by the log line).
 2. Doctrine: scripted pirate and military frigates; read the values before and after, sample the distance
    to the player every 0.5 s for 30 s, check the close pass is gone and the values persist.
-3. Retreat: an ally with low armor, in and outside a squad; no despawn; returns after repair.
-4. Hull states: damage an enemy by script; each threshold writes once and nothing resets it.
-5. Cost: 30 s of a fleet fight, log size, no crash.
+3. Retreat (0.2.0): a scripted allied frigate with 15 % health: the flag is set, its distance to the root falls, no
+   despawn, it rejoins after repair; a healthy ally is left alone; one too far from its root is left alone; the
+   player's locked target reaches a healthy ally's `MainTarget` once; a ship inside a squad (an allied one if the
+   save has any, otherwise an enemy squad member with the flag set by hand) is watched to see whether it follows.
+4. Hull states (0.3.0): scripted frigates set to 60, 45, 20 % health: each stage writes once (speed x0.85, then shield
+   x0.5, then speed x0.65), nothing changes over the next 20 s, a `CalculateStats` call is answered by one re-apply,
+   repair puts the base back; with the doctrine on the pirate's turn is base x0.85 x stage; capital and player untouched.
+5. Cost: 30 s with six enemy and four allied frigates and everything on, log size, private bytes every 30 s, the longest
+   gap between timer ticks, no crash.

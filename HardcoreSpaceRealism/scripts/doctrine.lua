@@ -1,5 +1,5 @@
 --[[
-  Enemy doctrine by tier (Hardcore Space Realism 0.1.0).
+  Enemy doctrine by tier (Hardcore Space Realism, in since 0.1.0; OFF by default until tested in game).
 
   The game's enemy fighters and frigates (Base_Frigate_C) fly a "close pass": when the target is nearer than
   CloseTrueBeheviur x RangeMultipler they set Close? = true, double their speed, halve their turning and dive at a
@@ -11,12 +11,13 @@
   and they turn a little slower (sloppy: ShipBaseTurnSpeed x SloppyTurn). Higher ranks of the military factions
   are left as the game has them.
 
-  Only constants are written: CloseTrueBeheviur is never written by the game, ShipBaseTurnSpeed is written when the
-  game calculates the ship's stats (so each ship is checked again every scan and re-applied if the game changed it).
+  Only constants are written: CloseTrueBeheviur is never written by the game; ShipBaseTurnSpeed is written when the
+  game calculates the ship's stats, so it goes through shipmods.lua (shared with hull.lua): base x multipliers,
+  checked again every scan and re-applied if the game changed it.
   Nothing the AI rewrites every cycle (SpeedMultipler, TurnSpeedMultipler, RangeMultipler...) is touched.
   Cost: one FindAllOf per scan on the gametick timer; a few property reads per ship; writes only when needed.
 ]]
-
+local Mods = require("shipmods")
 local D = {}
 
 local SHIP = "Base_Frigate_C"
@@ -45,14 +46,12 @@ local function alive(o)
     return true
 end
 
-local function same(a, b) return math.abs((a or 0) - (b or 0)) <= 0.01 + math.abs(b or 0) * 1e-4 end
-
 --- start(GT, cfg, log, warn): cfg = { Enabled, LowRank, SloppyTurn, Interval }
 function D.start(GT, cfg, log, warn)
     if not cfg.Enabled then log("enemy doctrine off in config.lua") return end
     local lowRank = math.floor(tonumber(cfg.LowRank) or 1)
     local sloppy = math.max(0.3, math.min(1.0, tonumber(cfg.SloppyTurn) or 0.85))
-    local seen = {}  -- full name -> { turnBase = ShipBaseTurnSpeed before our write, turnSet = what we wrote }
+    local seen = {}  -- full name -> true (ships tracked; the turn values live in shipmods.lua)
     local touched, lastCount = 0, -1
 
     local function isLowTier(ship)
@@ -72,24 +71,17 @@ function D.start(GT, cfg, log, warn)
                 local okN, name = pcall(function() return s:GetFullName() end)
                 if okN then
                     cur[name] = true
-                    local rec = seen[name]
+                    seen[name] = true
                     local close0 = prop(s, "CloseTrueBeheviur", 0)
-                    local turn = prop(s, "ShipBaseTurnSpeed", 0)
-                    if rec == nil then rec = { turnBase = nil, turnSet = nil }; seen[name] = rec end
                     local did = {}
                     if close0 > 0 then
                         local ok = pcall(function() s.CloseTrueBeheviur = 0 end)
                         if ok then did[#did + 1] = string.format("close pass off (was %.0f)", close0) end
                     end
-                    -- turn: first time, or the game recalculated the ship's stats and replaced our value
-                    if turn > 0 and (rec.turnSet == nil or not same(turn, rec.turnSet)) then
-                        rec.turnBase = turn
-                        local ok = pcall(function() s.ShipBaseTurnSpeed = turn * sloppy end)
-                        if ok then
-                            rec.turnSet = turn * sloppy
-                            did[#did + 1] = string.format("turn %.1f -> %.1f", turn, turn * sloppy)
-                        end
-                    end
+                    -- turn: base x multipliers; the game's own value is the base, re-read when the game
+                    -- recalculated the ship's stats and replaced our value
+                    local turned = Mods.apply(s, name, "doctrine", { Turn = sloppy })
+                    if turned ~= "" then did[#did + 1] = turned end
                     if #did > 0 then
                         touched = touched + 1
                         log(string.format("doctrine %s faction %s rank %s level %s: %s",

@@ -6,9 +6,9 @@ A [UE4SS](https://github.com/UE4SS-RE/RE-UE4SS) Lua mod: the space counterpart o
 [Hardcore Tactical Realism](https://github.com/hubertdungen/SpaceBourne2-HardcoreTacticalRealism).
 Everything is on by default, automatic, with no keys and no menus. Part of the SpaceBourne 2 realism set.
 
-> **Status: 0.2.0.** The ally pod catchers are on by default. The enemy doctrine and the smarter allied
-> ships are in but **off by default** until they have been tested in the game (each has its own switch in
-> `config.lua`). Ship damage that matters is planned. [DESIGN.md](DESIGN.md) has the research.
+> **Status: 0.3.0.** The ally pod catchers are on by default. The enemy doctrine, the smarter allied
+> ships and the ship damage are in but **off by default** until they have been tested in the game (each has
+> its own switch in `config.lua`). [DESIGN.md](DESIGN.md) has the research.
 
 ## What it does
 
@@ -32,8 +32,17 @@ that are not in a squad also attack the target you have locked, once per new tar
 ship, enemies, aliens, civilians, cargo, drones, capital ships, command and mother ships. Switch it on with
 `AlliedShips.Enabled = true`; it becomes the default once it has been tested.
 
+**Ship damage that matters (0.3.0, off by default).** The game has one damage model: shield, then armor, with no
+engine or weapon parts. So a ship's state comes from its health (armor + shield against their maximum). Below
+66 % its engines and turning drop by 15 %; below 50 % its shield also recharges at half speed; below 33 % engines and
+turning are at 65 %. Each stage is written once when the ship crosses it, to constants the game computes once per
+ship (and re-applied if the game computes them again). Enemy and allied fighters and frigates. **Your own ship is
+not touched**, nor are aliens, civilians, cargo, drones or capital ships. Switch it on with
+`ShipDamage.Enabled = true`; it becomes the default once it has been tested.
+
 *Planned, not yet in:*
-- **Ship damage that matters:** a ship that has lost hull flies and turns worse and recharges its shield slower.
+- **Damage to your own ship** (engines off, weapons down): only after the game's stat recalculation for the player's
+  ship has been read, so a write is not undone.
 
 ## Settings
 
@@ -58,6 +67,10 @@ Edit `HardcoreSpaceRealism/scripts/config.lua`, save, restart the game.
 | `AlliedShips.ShareTarget.Enabled` | `true` | Allies outside a squad attack your locked target. |
 | `AlliedShips.ShareTarget.Range` | `20000` | Metres from you: only allies this close are told. |
 | `AlliedShips.Interval` | `3.0` | Seconds between scans. |
+| `ShipDamage.Enabled` | `false` | NPC ships fly, turn and recharge shields worse as they lose hull. |
+| `ShipDamage.Enemies` / `Allies` | `true` | Which ships it applies to. |
+| `ShipDamage.Stages` | 66 / 50 / 33 % | `Below` (health ratio) with `Speed`, `Turn` and `Shield` multipliers; the deepest stage reached applies. |
+| `ShipDamage.Interval` | `3.0` | Seconds between scans. |
 | `Debug` | `false` | Writes what the mod does to `hardcorespacerealism.log`. |
 
 ## Works with Bigger Armies
@@ -86,7 +99,7 @@ it, switches the mods you tick on and keeps them updated.
 - A catch can complete the mission objective "catch a pod" (the game's own rule for any catch).
 - The pod catchers were tested with scripted allies and pods (in Bigger Armies 0.2.0, same code); a real fleet
   fight is not tested yet. The enemy doctrine and the smarter allied ships are not tested in the game yet
-  (that is why they are off by default).
+  (that is why they are off by default), and neither is the ship damage.
 - Retreat uses the game's own "return to spawn" flag. Whether a ship inside a squad follows it is not known yet.
 
 ## Compatibility

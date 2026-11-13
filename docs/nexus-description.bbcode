@@ -2,7 +2,7 @@
 
 A [url=https://github.com/UE4SS-RE/RE-UE4SS]UE4SS[/url] Lua mod: the space counterpart of [url=https://github.com/hubertdungen/SpaceBourne2-HardcoreTacticalRealism]Hardcore Tactical Realism[/url]. Everything is on by default, automatic, with no keys and no menus. Part of the SpaceBourne 2 realism set.
 
-[b]Status: 0.2.0.[/b] The ally pod catchers are on by default. The enemy doctrine and the smarter allied ships are in but [b]off by default[/b] until they have been tested in the game (each has its own switch in config.lua). Ship damage that matters is planned. [url=https://github.com/hubertdungen/SpaceBourne2-HardcoreSpaceRealism/blob/main/DESIGN.md]DESIGN.md[/url] has the research.
+[b]Status: 0.3.0.[/b] The ally pod catchers are on by default. The enemy doctrine, the smarter allied ships and the ship damage are in but [b]off by default[/b] until they have been tested in the game (each has its own switch in config.lua). [url=https://github.com/hubertdungen/SpaceBourne2-HardcoreSpaceRealism/blob/main/DESIGN.md]DESIGN.md[/url] has the research.
 
 [line]
 [size=5][b]What it does[/b][/size]
@@ -13,9 +13,11 @@ A [url=https://github.com/UE4SS-RE/RE-UE4SS]UE4SS[/url] Lua mod: the space count
 
 [b]Smarter allied ships (0.2.0, off by default).[/b] In the game an allied fighter or frigate fights until it dies. With this on, an ally whose armor and shield are below 25 % pulls back with the game's own "return to spawn" flag (it flies to where it came from, or to your ship, and the game stops it there). It rejoins when it is above 60 % again (shields recharge by themselves) or after two minutes, whichever comes first. Allies that are not in a squad also attack the target you have locked, once per new target. Never touched: your ship, enemies, aliens, civilians, cargo, drones, capital ships, command and mother ships. Switch it on with AlliedShips.Enabled = true; it becomes the default once it has been tested.
 
+[b]Ship damage that matters (0.3.0, off by default).[/b] The game has one damage model: shield, then armor, with no engine or weapon parts. So a ship's state comes from its health (armor + shield against their maximum). Below 66 % its engines and turning drop by 15 %; below 50 % its shield also recharges at half speed; below 33 % engines and turning are at 65 %. Each stage is written once when the ship crosses it, to constants the game computes once per ship (and re-applied if the game computes them again). Enemy and allied fighters and frigates. [b]Your own ship is not touched[/b], nor are aliens, civilians, cargo, drones or capital ships. Switch it on with ShipDamage.Enabled = true; it becomes the default once it has been tested.
+
 [i]Planned, not yet in:[/i]
 [list]
-[*][b]Ship damage that matters:[/b] a ship that has lost hull flies and turns worse and recharges its shield slower.
+[*][b]Damage to your own ship[/b] (engines off, weapons down): only after the game's stat recalculation for the player's ship has been read, so a write is not undone.
 [/list]
 
 [line]
@@ -41,6 +43,10 @@ Edit HardcoreSpaceRealism/scripts/config.lua, save, restart the game.
 [*][b]AlliedShips.ShareTarget.Enabled[/b]: true - Allies outside a squad attack your locked target.
 [*][b]AlliedShips.ShareTarget.Range[/b]: 20000 - Metres from you: only allies this close are told.
 [*][b]AlliedShips.Interval[/b]: 3.0 - Seconds between scans.
+[*][b]ShipDamage.Enabled[/b]: false - NPC ships fly, turn and recharge shields worse as they lose hull.
+[*][b]ShipDamage.Enemies / Allies[/b]: true - Which ships it applies to.
+[*][b]ShipDamage.Stages[/b]: 66 / 50 / 33 % - Below (health ratio) with Speed, Turn and Shield multipliers; the deepest stage reached applies.
+[*][b]ShipDamage.Interval[/b]: 3.0 - Seconds between scans.
 [*][b]Debug[/b]: false - Writes what the mod does to hardcorespacerealism.log.
 [/list]
 
@@ -67,7 +73,7 @@ Bigger Armies 0.2.0 had the same pod catchers. If it is installed and on with it
 [list]
 [*]Pod catching uses the game's own CatchByMother call, so the pod flies to the allied ship and the game's own catcher drone animation runs under your ship.
 [*]A catch can complete the mission objective "catch a pod" (the game's own rule for any catch).
-[*]The pod catchers were tested with scripted allies and pods (in Bigger Armies 0.2.0, same code); a real fleet fight is not tested yet. The enemy doctrine and the smarter allied ships are not tested in the game yet (that is why they are off by default).
+[*]The pod catchers were tested with scripted allies and pods (in Bigger Armies 0.2.0, same code); a real fleet fight is not tested yet. The enemy doctrine and the smarter allied ships are not tested in the game yet (that is why they are off by default), and neither is the ship damage.
 [*]Retreat uses the game's own "return to spawn" flag. Whether a ship inside a squad follows it is not known yet.
 [/list]
 
