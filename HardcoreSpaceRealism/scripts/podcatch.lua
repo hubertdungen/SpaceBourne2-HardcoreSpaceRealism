@@ -109,6 +109,7 @@ function P.start(GT, cfg, log, warn)
     local lastFull = false
     local caught, credited = 0, 0
     local warnedPower = false
+    local lastNote = {}                  -- pod name -> os.clock() of the last "waits" note
     local done = {}                      -- full name of a pod we took -> os.clock(): never taken twice
     local firstSeen = {}                 -- full name of a free, started pod -> os.clock() of the first scan that saw it free
 
@@ -171,7 +172,13 @@ function P.start(GT, cfg, log, warn)
                 if l then live[#live + 1] = { actor = a, loc = l } end
             end
         end
-        if #live == 0 then return end
+        if #live == 0 then
+            if not lastNote.none or now - lastNote.none >= 4 then
+                lastNote.none = now
+                log("pods past their grace window, but no living allied ship found")
+            end
+            return
+        end
 
         for _, f in ipairs(free) do
             local pod = f.actor
@@ -214,6 +221,14 @@ function P.start(GT, cfg, log, warn)
                         else
                             warn("pod catch: " .. tostring(err))
                         end
+                    end
+                elseif best then
+                    -- why a pod past its grace window is still waiting (Debug log, at most every 4 s per pod)
+                    local nt = lastNote[f.name]
+                    if not nt or now - nt >= 4 then
+                        lastNote[f.name] = now
+                        log(string.format("pod %s waits: nearest ally %.0f m, you %.0f m, reach %.0f m", (f.name:gsub("^.*%.", "")),
+                            math.sqrt(bestD) / 100, math.sqrt(dist2(pl, pp)) / 100, math.sqrt(reach) / 100))
                     end
                 end
             end
