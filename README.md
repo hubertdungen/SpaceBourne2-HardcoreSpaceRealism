@@ -16,35 +16,31 @@ Everything is on by default, automatic, with no keys and no menus. Part of the S
 
 ## What it does
 
-**Ally pod catchers (0.1.0).** When a ship dies its pilot ejects in a rescue pod. The game lets only
-you catch it: with your mothership's pod catcher perk or the pod catcher item. With this mod an
-allied ship that is closer to a free pod than you are, and within range, catches it. The pilot goes
-to **your** captives, exactly as if you had caught it. Nothing is caught when your captive slots are
-full or when your own mothership perk is on (it already takes every free pod).
+**Ally pod catchers.** When a ship dies its pilot ejects in a rescue pod. The game lets only you catch it: with your
+mothership's pod catcher perk or the pod catcher item. With this mod an allied ship that is closer to a free pod
+than you are picks it up. By default the pilot goes to your **faction**: you get 50 Faction Power and no captive slot is used.
+Set `PodCatchers.Credit = "player"` and the pilot goes to your own captive slots instead, as if you had caught it
+(the pod flies to the ally and the game's catcher drone animation plays).
 
 You get the first chance: a pod must have been free for `GraceSeconds` (8 by default, so 8 to 10.5 s with the
 scan interval) before an ally takes it. That is quick, the pod is not lost, but it is not instant. A pod you
-catch (or that is destroyed) in that time is simply forgotten.
+catch (or that is destroyed) in that time is simply forgotten. Nothing is taken while your own mothership perk is on
+(it already takes every free pod).
 
-**Faction credit (0.4.0, on by default).** With `PodCatchers.Credit = "faction"` (the default) the pilot goes to
-your faction instead of your captive slots: an ally within `FactionRange` (3 km) of the pod picks it up, your
-faction gets `FactionPowerPerPilot` (50) Faction Power (the same game call the Faction Power mod uses) and the pod
-is removed. No slot is used. The game's own catch always ends in your captive list, so this mode skips it: the ally
-must already be near the pod (it does not fly it in) and the mission objective "catch a pod" does not complete.
+With the faction credit an ally within `FactionRange` (3 km) of the pod picks it up (allies keep moving, so 1 km was
+too tight) and the pod is removed. The game's own catch always ends in your captive list, so this mode skips it: the ally
+does not fly the pod in, and the mission objective "catch a pod" does not complete.
 <!-- nexus:skip -->Tested in the game (2026-11-14): the Faction Power rose by 50 per pod, the pod was removed, nothing was used from the
-captive slots (even with them full) and the grace window held. Allies move about 60 m/s, which is why the range is 3 km.<!-- /nexus:skip -->
-An ally within 3 km of the pod is enough, because allies keep moving.
-Set `PodCatchers.Credit = "player"` to get the pilots in your own captive slots instead (the game's own catch, also tested).
-`"player"` stays the default until it is decided which credit the set wants.
+captive slots (even with them full) and the grace window held. Allies move about 60 m/s.<!-- /nexus:skip -->
 
-**Enemy doctrine by tier (0.1.0, on by default).** In the game every enemy fighter and frigate ends its
+**Enemy doctrine by tier.** In the game every enemy fighter and frigate ends its
 run with a "close pass": it doubles its speed and dives at you. With this on, the low tiers (pirates, and
 ranks up to `LowRank`) never do that, so they keep shooting from their normal attack distance, and they
 turn a little slower (sloppy). Higher ranks of the military factions fly as the game has them. Never touched: allied
 ships, aliens, ships with no faction and the player's own faction. <!-- nexus:skip -->Tested in the game: a pirate inside 100 to 265 m of
 its target never started the close pass while a vanilla allied ship did.<!-- /nexus:skip --> Switch it off with `EnemyDoctrine.Enabled = false`.
 
-**Smarter allied ships (0.2.0, on by default: retreat only).** In the game an allied fighter or frigate fights until it
+**Smarter allied ships (retreat only).** In the game an allied fighter or frigate fights until it
 dies. With this on, an ally whose armor and shield are below 25 % pulls back with the game's own "return to
 spawn" flag (it flies to where it came from, or to your ship, and the game stops it there). It rejoins when
 it is above 60 % again (shields recharge by themselves) or after two minutes, whichever comes first. Allies
@@ -55,7 +51,7 @@ hurt ally flew back toward where it came from and rejoined after repair, but the
 2 s while the ship is engaged (the mod sets it again every few seconds), so it is not a clean withdrawal; an ally inside a
 squad was not tested. Switch it off with `AlliedShips.Enabled = false`.
 
-**Ship damage that matters (0.3.0, on by default).** The game has one damage model: shield, then armor, with no
+**Ship damage that matters.** The game has one damage model: shield, then armor, with no
 engine or weapon parts. So a ship's state comes from its health (armor + shield against their maximum). Below
 66 % its engines and turning drop by 15 %; below 50 % its shield also recharges at half speed; below 33 % engines and
 turning are at 65 %. Each stage is written once when the ship crosses it, to constants the game computes once per
