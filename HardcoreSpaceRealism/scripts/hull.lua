@@ -1,5 +1,5 @@
 --[[
-  NPC hull states (Hardcore Space Realism 0.3.0, OFF by default until tested in game).
+  NPC hull states (Hardcore Space Realism 0.3.0; ON by default since the in-game test of 2026-11-14).
   The game has one damage model for ships: shield, then armor, no engine, weapon or shield parts (only capital
   ships have parts and they are left alone). So a ship's "state" here comes from its hull ratio
   (CurrentArmor + CurrentShield) / (MaxArmor + MaxShield). Each stage multiplies constants the game computes once

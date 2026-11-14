@@ -20,12 +20,12 @@ return {
         -- Where the pilot goes:
         --   "player"  (tested) the game's own catch: the pod flies to the ally and the pilot lands in YOUR captive
         --             slots, as if you had caught it. Nothing is caught when your slots are full.
-        --   "faction" (works in the game, tested 2026-11-14, but a different feel from "player") no captive: an ally within FactionRange of the pod
+        --   "faction" (DEFAULT, tested in the game 2026-11-14) no captive: an ally within FactionRange of the pod
         --             picks it up, your faction gets FactionPowerPerPilot Faction Power (the Faction Power currency,
         --             the same game call the Faction Power mod uses) and the pod is removed. Your slots are not used.
         --             The game's own catch always ends in YOUR captive list, so this skips it: the ally must be close
         --             (it does not fly the pod in) and the mission objective "catch a pod" is not completed.
-        Credit = "player",
+        Credit = "faction",
         FactionRange = 3000,        -- metres: "faction" mode, an ally this close to the pod picks it up (allies move about 60 m/s, so 1 km is too tight)
         FactionPowerPerPilot = 50,  -- "faction" mode (the Faction Power mod pays 300-600 for a mission or a dungeon)
     },
@@ -34,23 +34,23 @@ return {
     -- speed and dives at you. Here the low tiers (pirates, and ranks up to LowRank) never do that, so they keep
     -- shooting from their normal attack distance, and they turn a little slower (sloppy). Higher ranks of the
     -- military factions are left as the game has them.
-    -- OFF in 0.1.0: written from the game's own logic but not tested in the game yet. Switch it on to try it
-    -- (and tell me how it goes); it will be on by default once it has been tested.
+    -- ON by default. Tested in the game (2026-11-14): the close pass is gone for low-tier pirates while a vanilla ship still does it.
     EnemyDoctrine = {
-        Enabled = false,
+        Enabled = true,
         LowRank = 1,        -- enemy rank (0 = weakest); pirates count as low tier whatever their rank
         SloppyTurn = 0.85,  -- low-tier turn speed x this (1 = unchanged)
         Interval = 3.0,     -- seconds between scans
     },
 
     -- Allied fighters and frigates (not the capital, cargo or command ships): retreat when badly damaged, and
-    -- fight the target you have locked. The game has no retreat: a ship fights until it dies. Retreat uses the
+    -- (optionally) fight the target you have locked. The game has no retreat: a ship fights until it dies. Retreat uses the
     -- game's own "return to spawn" flag, so the ship flies back to where it came from (your ship when it has no
     -- root) and the game stops it there. Health = armor + shield against their maximum.
-    -- OFF in 0.2.0: written from the game's own logic but not tested in the game yet. Switch it on to try it
-    -- (and tell me how it goes); it will be on by default once it has been tested.
+    -- ON by default, retreat only. Tested in the game (2026-11-14): the flag is accepted, the hurt ship flies back toward its root
+    -- and rejoins after repair, but the game clears the flag again within about 2 s while the ship is engaged (the mod sets it again
+    -- each scan), so it is not a clean withdrawal. Not tested: an ally inside a squad, a full fleet fight.
     AlliedShips = {
-        Enabled = false,
+        Enabled = true,
         Interval = 3.0,        -- seconds between scans
         Retreat = {
             Enabled = true,
@@ -70,9 +70,9 @@ return {
     -- the slower its shield recharges. Each stage is written once when it is crossed (never on every scan), to
     -- constants the game computes once per ship. Fighters and frigates only, enemies and allies; never your ship,
     -- aliens, civilians, cargo, drones or capital ships. Your own ship's damage is not touched.
-    -- OFF in 0.3.0: not tested in the game yet. Switch it on to try it (and tell me how it goes).
+    -- ON by default. Tested in the game (2026-11-14): stages, one write each, re-applied after a recalculation, restored on repair.
     ShipDamage = {
-        Enabled = false,
+        Enabled = true,
         Interval = 3.0,   -- seconds between scans
         Enemies = true,
         Allies = true,

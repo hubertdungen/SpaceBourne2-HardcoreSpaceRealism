@@ -11,12 +11,12 @@
   longer free is forgotten). Then a pod that is closer to an allied ship than to you is taken, in one of two ways
   (PodCatchers.Credit):
 
-  "player" (default, tested): inside PodCatchers.Range of that ship, the game's own MasterPod:CatchByMother(ally
+  "player" (tested): inside PodCatchers.Range of that ship, the game's own MasterPod:CatchByMother(ally
       ship): the pod flies to the ally, the game's own drone cable animation plays and the pilot lands in YOUR
       captives (Q1_Master_Ship.Captives), exactly like your own catch. Not done when your captive slots are full.
       The pod's own catch flow ends in Ship.AddCaptive on the player's ship whoever "the mother" is (read in the
       Blueprint), so this is the only credit the game's catch can give.
-  "faction" (experimental, off until tested): no captive. An ally within PodCatchers.FactionRange of the pod picks
+  "faction" (DEFAULT, tested in the game 2026-11-14): no captive. An ally within PodCatchers.FactionRange of the pod picks
       it up: your faction gets FactionPowerPerPilot Faction Power (Game_Builder "Add Remove Faction Power", the
       call the Faction Power mod uses) and the pod is removed. Your captive slots are not used and not needed.
 

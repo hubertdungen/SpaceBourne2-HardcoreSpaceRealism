@@ -1,5 +1,5 @@
 --[[
-  Smarter allied ships (Hardcore Space Realism 0.2.0, OFF by default until tested in game).
+  Smarter allied ships (Hardcore Space Realism 0.2.0; ON by default with retreat only since the in-game test, shared target OFF).
   Allied fighters and frigates (Master_Enemy_C with AITypes 1, found as Base_Frigate_C) get two things:
 
   1. Retreat when badly damaged. The game has no retreat: a ship fights until it dies. The game does have the

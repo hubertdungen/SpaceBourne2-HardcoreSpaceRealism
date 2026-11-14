@@ -1,2 +1,5 @@
 # files the mod writes in its folder
 hardcorespacerealism.log
+
+# local tool state
+.claude/

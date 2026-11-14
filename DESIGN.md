@@ -14,7 +14,8 @@ tried in the game), **unknown**.
 - No per-frame calls to functions with out-parameters (they leak in the UE4SS registry). Scans
   (`FindAllOf`) only on the timer, never in a hook.
 - Everything is on by default, automatic, with its own switch in `config.lua`; a new part ships OFF until it has
-  been tested in the game (0.1.0 doctrine, 0.2.0 allied ships, 0.3.0 ship damage), then it is switched on.
+  been tested in the game. All parts were tested on 2026-11-14 (section 8) and ship ON: pod catchers with the faction credit,
+  enemy doctrine, ship damage, allied retreat (the shared target stays off).
 - Never write a game value the game rewrites every cycle; write once the values it computes once.
 
 ## 2. Ally pod catchers (done)
@@ -40,7 +41,7 @@ player, destroyed, tags cleared) are dropped on every scan, so a pod that comes 
 (mock pods and ships, 17 checks): no catch before 8 s, catch after, forgotten when caught or destroyed, slots full,
 perk on, player nearer.
 
-**Faction credit (0.4.0, experimental, off, not tested in the game).** What the data says:
+**Faction credit (0.4.0, the default, tested in the game 2026-11-14, see section 8).** What the data says:
 - The pod's catch flow (`MasterPod` ubergraph, read in the dump) ends in `GetShip(...).Ship.AddCaptive(self.Captive, false)`:
   the player's ship, whatever actor was given to `CatchByMother`. So the game's catch cannot credit anyone else.
 - A captive (`S_CaptiveData`: Name, Portre, Price, pirate flag) is only a list entry on `Q1_Master_Ship.Captives` that is sold
@@ -63,7 +64,7 @@ really rises by 50, and whether this mode feels right with allies that rarely pa
 (the first catch clears the `FreePod` tag), but two mods doing the same work would double-count slots. To
 check in the game: which wins when `mods.txt` says `: 0` and an `enabled.txt` exists.
 
-## 3. Smarter allied ships (in 0.2.0, off by default, not tested in the game)
+## 3. Smarter allied ships (in 0.2.0, on by default: retreat only, shared target off; partly tested, section 8)
 
 - All NPC ships are `Master_Enemy_C : Pawn`; the flight AI is Blueprint in `Base_Frigate_C` (fighters and
   frigates), so it can be read and steered from Lua.
@@ -98,7 +99,7 @@ check in the game: which wins when `mods.txt` says `: 0` and an `enabled.txt` ex
   (shield recharge is certain, so the resume threshold may need `MaxSeconds`); what the player sees when an ally
   idles at its root. Ships that carry the flag when the mod stops are left as they are (the game clears it).
 
-## 4. Enemy ships by tier (in 0.1.0, off by default, not tested in the game)
+## 4. Enemy ships by tier (in 0.1.0, on by default; tested in the game, section 8)
 
 - Tier data on each ship: `AITypes`, `Faction` (Morthra, Falron, Xeghan, Pirates, Aliens, None, Earthling),
   `Level`, `Enemy_Rank`, `ShipType`, `ShipSize`.
@@ -119,10 +120,10 @@ check in the game: which wins when `mods.txt` says `: 0` and an `enabled.txt` ex
   (disciplined = as the game flies them). Later: hold the band, share targets, retreat when badly damaged.
 - **Not verified in the game**: whether `CloseTrueBeheviur = 0` really removes the pass (the pass is also entered
   when `CanMakeSpeedAdjustmants?` is false), whether the written values persist, and whether the close pass is
-  what the player sees as a rush. The first test launch (2026-11-13) did not get past the main menu, so the
-  doctrine ships OFF until the checks in section 7 pass.
+  what the player sees as a rush. The first test launch (2026-11-13) did not get past the main menu; in the 2026-11-14 tests the
+  values were written and held, and in flight a pirate never started the close pass while a vanilla ally did (section 8).
 
-## 5. Ship damage that matters (NPC hull states in 0.3.0, off by default, not tested in the game; player ship researched only)
+## 5. Ship damage that matters (NPC hull states in 0.3.0, on by default, tested in the game; player ship researched only)
 
 - Game model: shield, then armor, by damage type (Bullet, Laser, Missile), crit, DoT, slow, blind, all in
   `Damage_Component:Damage1`. No engine, weapon or shield part. Only capital ships have real parts: left alone.
@@ -157,14 +158,14 @@ check in the game: which wins when `mods.txt` says `: 0` and an `enabled.txt` ex
 
 - 0.1.0: pod catchers and the guard; then enemy doctrine by tier after two in-game checks (ram or strafing
   pass; do the once-written values stick).
-- 0.2.0 (in, off by default): ally retreat and shared target. 0.3.0 (in, off by default): NPC hull states. Later:
-  damage to the player's ship only after `CalculateStats` has been read. Each new part ships OFF until it has been
+- 0.2.0 (in, on: retreat; shared target off): allied ships. 0.3.0 (in, on): NPC hull states. 0.4.0: grace window and faction credit
+  (on). Later: damage to the player's ship only after `CalculateStats` has been read. Each new part ships OFF until it has been
   tested in the game, then it is switched on by default.
 
 ## 7. Test plan (game launches only when allowed)
 
 One launch covers 0.1.0, 0.2.0 and 0.3.0: a copy of a space save in a test slot, this mod alone plus the dev
-console, every new part switched on in the test copy of `config.lua` (they are off by default in the repo). The
+console, every part switched on in the test copy of `config.lua` (the repo default is now all on, the shared target off). The
 test kit (outside this repository) drives it with scripted ships.
 1. Pods: the eight Bigger Armies cases with longer waits (grace 8 s + flight 12 s: positive cases 30 s, negative ones
    16 s so a bug would show), plus case 9 (nothing at 3 s and 6 s, the catch only after about 8 to 10.5 s), case 10 (a pod

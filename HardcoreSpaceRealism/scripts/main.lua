@@ -2,12 +2,12 @@
   Hardcore Space Realism for SpaceBourne 2 (UE4SS Lua mod)
   Part of the SpaceBourne 2 realism set: the space counterpart of Hardcore Tactical Realism.
   0.1.0: the ally pod catchers (podcatch.lua, moved here from Bigger Armies 0.2.0, tested there) and the enemy
-  doctrine by tier (doctrine.lua, OFF by default until it has been tested in game).
-  0.2.0: smarter allied ships (allies.lua: retreat when badly damaged, shared target), OFF by default until tested.
-  0.4.0: pod catchers get a grace window (the player gets the first chance) and an experimental faction credit
-  (Credit = "faction", OFF by default until tested).
-  0.3.0: NPC hull states (hull.lua: engines, turning and shield recharge drop with the hull), OFF by default until
-  tested. doctrine.lua and hull.lua share shipmods.lua (one record of base values per ship); shiputil.lua is the
+  doctrine by tier (doctrine.lua, ON by default since the in-game test of 2026-11-14).
+  0.2.0: smarter allied ships (allies.lua: retreat when badly damaged; shared target OFF), ON by default (retreat only).
+  0.4.0: pod catchers get a grace window (the player gets the first chance) and a faction credit
+  (Credit = "faction", the default since the in-game test).
+  0.3.0: NPC hull states (hull.lua: engines, turning and shield recharge drop with the hull), ON by default
+  since the in-game test. doctrine.lua and hull.lua share shipmods.lua (one record of base values per ship); shiputil.lua is the
   read-only helper set for the ship modules. DESIGN.md has the research and the plan.
   Timed work runs on the shared gametick.lua (no LoopAsync / ExecuteWithDelay / ExecuteAsync, see its header).
 ]]
@@ -48,6 +48,7 @@ if cfg.Debug then verbose = true end
 
 local podCfg = type(cfg.PodCatchers) == "table" and cfg.PodCatchers or {}
 if podCfg.Enabled == nil then podCfg.Enabled = true end
+if podCfg.Credit == nil then podCfg.Credit = "faction" end
 if type(podCfg.Range) ~= "number" then podCfg.Range = 5000 end
 podCfg.Range = math.max(100, math.min(50000, podCfg.Range))
 if type(podCfg.Interval) ~= "number" then podCfg.Interval = 2.5 end
@@ -116,7 +117,7 @@ if podCfg.Enabled then
 end
 
 local docCfg = type(cfg.EnemyDoctrine) == "table" and cfg.EnemyDoctrine or {}
-if docCfg.Enabled == nil then docCfg.Enabled = false end
+if docCfg.Enabled == nil then docCfg.Enabled = true end
 local docOn = "off"
 if docCfg.Enabled then
     local okD, D = pcall(require, "doctrine")
@@ -129,7 +130,7 @@ if docCfg.Enabled then
 end
 
 local allyCfg = type(cfg.AlliedShips) == "table" and cfg.AlliedShips or {}
-if allyCfg.Enabled == nil then allyCfg.Enabled = false end
+if allyCfg.Enabled == nil then allyCfg.Enabled = true end
 local allyOn = "off"
 if allyCfg.Enabled then
     local okA, A = pcall(require, "allies")
@@ -142,7 +143,7 @@ if allyCfg.Enabled then
 end
 
 local hullCfg = type(cfg.ShipDamage) == "table" and cfg.ShipDamage or {}
-if hullCfg.Enabled == nil then hullCfg.Enabled = false end
+if hullCfg.Enabled == nil then hullCfg.Enabled = true end
 local hullOn = "off"
 if hullCfg.Enabled then
     local okH, H = pcall(require, "hull")

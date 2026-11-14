@@ -1,5 +1,5 @@
 --[[
-  Enemy doctrine by tier (Hardcore Space Realism, in since 0.1.0; OFF by default until tested in game).
+  Enemy doctrine by tier (Hardcore Space Realism, in since 0.1.0; ON by default since the in-game test of 2026-11-14).
 
   The game's enemy fighters and frigates (Base_Frigate_C) fly a "close pass": when the target is nearer than
   CloseTrueBeheviur x RangeMultipler they set Close? = true, double their speed, halve their turning and dive at a
