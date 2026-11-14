@@ -30,8 +30,32 @@ Moved from Bigger Armies 0.2.0 (`podcatch.lua`, unchanged). Game facts:
 - Captive slots: `Captives` array length against `Max Captive`; catches in flight (12 s) count as used.
 
 Mod behaviour: every `Interval` seconds find free, started pods; skip all if your perk is on or slots are
-full; an ally nearer the pod than you and within `Range` catches it. Credit goes to the player; a separate
-faction account would need a new stat and is not done.
+full; an ally nearer the pod than you and within `Range` catches it. Credit goes to the player by default.
+
+**Grace window (0.4.0, in the code, offline-tested).** Each free, started pod is tracked by full name from the first scan
+that sees it (`firstSeen`); only after `GraceSeconds` (default 8: the game's own catch needs a few seconds of
+approach and lock and the perk takes a pod every 10 s, so 8 s is quick but leaves the player the first go; the real wait
+is 8 to 10.5 s with the 2.5 s scan) may an ally take it. Entries that are not free and started any more (caught by the
+player, destroyed, tags cleared) are dropped on every scan, so a pod that comes back starts a new clock. Offline test
+(mock pods and ships, 17 checks): no catch before 8 s, catch after, forgotten when caught or destroyed, slots full,
+perk on, player nearer.
+
+**Faction credit (0.4.0, experimental, off, not tested in the game).** What the data says:
+- The pod's catch flow (`MasterPod` ubergraph, read in the dump) ends in `GetShip(...).Ship.AddCaptive(self.Captive, false)`:
+  the player's ship, whatever actor was given to `CatchByMother`. So the game's catch cannot credit anyone else.
+- A captive (`S_CaptiveData`: Name, Portre, Price, pirate flag) is only a list entry on `Q1_Master_Ship.Captives` that is sold
+  at the captive market for its Price. There is no captive store for the faction or its armies (research note 2026-11-13).
+- The faction does have a currency: Faction Power, `Game_Builder.FactionPower`, with the callable
+  `"Add Remove Faction Power"(Amount:Int, out, out)` that the Faction Power mod already uses in the game
+  (`Q1Controller.GameBuilderRef`).
+So "faction" mode skips the game's catch: an ally within `FactionRange` of the pod (and nearer than the player, after the
+grace window) adds `FactionPowerPerPilot` to the faction and the pod is destroyed (`K2_DestroyActor`, what the tests use
+to clean up pods). Captive slots are not involved. Costs: the ally does not fly the pod in (no cable animation), the
+mission objective "catch a pod" is not completed, and the amount is flat (50), not the pilot's Price: reading the
+price needs the struct member name with its GUID suffix, left out. It bypasses the Faction Power mod's own budget
+and diminishing returns (it calls the game directly): a pilot is small (50 against 300 to 600 for a mission).
+Not verified in the game: the call from this mod, that destroying the pod is harmless for the game, that Faction Power
+really rises by 50, and whether this mode feels right with allies that rarely pass within 1 km of a pod.
 
 **Bigger Armies guard.** If Bigger Armies' `scripts\podcatch.lua` exists (0.2.0 only), it is enabled
 (`mods.txt` line `BiggerArmies : 1`, or no line and an `enabled.txt`) and its `config.lua` leaves
@@ -142,7 +166,11 @@ check in the game: which wins when `mods.txt` says `: 0` and an `enabled.txt` ex
 One launch covers 0.1.0, 0.2.0 and 0.3.0: a copy of a space save in a test slot, this mod alone plus the dev
 console, every new part switched on in the test copy of `config.lua` (they are off by default in the repo). The
 test kit (outside this repository) drives it with scripted ships; `HSRTest` is a global the mod sets for it.
-1. Pods: the eight Bigger Armies cases; the Bigger Armies guard with the real `Mods` path (a Bigger Armies 0.2.0
+1. Pods: the eight Bigger Armies cases with longer waits (grace 8 s + flight 12 s: positive cases 30 s, negative ones
+   16 s so a bug would show), plus case 9 (nothing at 3 s and 6 s, the catch only after about 8 to 10.5 s), case 10 (a pod
+   destroyed inside the grace window is forgotten), case 11 (`Credit = "faction"`: an ally 500 m from the pod, slots
+   full, Faction Power rises by 50, pod removed, captive count unchanged) and case 12 (faction mode, ally 4 km away:
+   untouched). The test kit switches the mode live through `HSRTest.podCfg`; the Bigger Armies guard with the real `Mods` path (a Bigger Armies 0.2.0
    snapshot sits in the test copy, off: the guard is called with `mods.txt` saying `BiggerArmies : 1`, then with its
    `PodCatchers` off; booting with it on is covered offline, 7 mock folders, and by the log line).
 2. Doctrine: scripted pirate and military frigates; read the values before and after, sample the distance

@@ -4,13 +4,15 @@
   0.1.0: the ally pod catchers (podcatch.lua, moved here from Bigger Armies 0.2.0, tested there) and the enemy
   doctrine by tier (doctrine.lua, OFF by default until it has been tested in game).
   0.2.0: smarter allied ships (allies.lua: retreat when badly damaged, shared target), OFF by default until tested.
+  0.4.0: pod catchers get a grace window (the player gets the first chance) and an experimental faction credit
+  (Credit = "faction", OFF by default until tested).
   0.3.0: NPC hull states (hull.lua: engines, turning and shield recharge drop with the hull), OFF by default until
   tested. doctrine.lua and hull.lua share shipmods.lua (one record of base values per ship); shiputil.lua is the
   read-only helper set for the ship modules. DESIGN.md has the research and the plan.
   Timed work runs on the shared gametick.lua (no LoopAsync / ExecuteWithDelay / ExecuteAsync, see its header).
 ]]
 
-local VERSION = "0.3.0"
+local VERSION = "0.4.0"
 
 -- Folder and log ---------------------------------------------------------------------------------------
 local DIR
@@ -140,7 +142,7 @@ if allyCfg.Enabled then
 end
 
 -- For tests only (read by the dev console in the test kit; nothing in the mod uses it).
-HSRTest = { version = VERSION, MODS = MODS, baHasPodCatchers = baHasPodCatchers }
+HSRTest = { version = VERSION, MODS = MODS, baHasPodCatchers = baHasPodCatchers, podCfg = podCfg }
 
 local hullCfg = type(cfg.ShipDamage) == "table" and cfg.ShipDamage or {}
 if hullCfg.Enabled == nil then hullCfg.Enabled = false end

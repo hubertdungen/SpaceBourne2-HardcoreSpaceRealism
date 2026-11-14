@@ -6,7 +6,7 @@ A [UE4SS](https://github.com/UE4SS-RE/RE-UE4SS) Lua mod: the space counterpart o
 [Hardcore Tactical Realism](https://github.com/hubertdungen/SpaceBourne2-HardcoreTacticalRealism).
 Everything is on by default, automatic, with no keys and no menus. Part of the SpaceBourne 2 realism set.
 
-> **Status: 0.3.0.** The ally pod catchers are on by default. The enemy doctrine, the smarter allied
+> **Status: 0.4.0.** The ally pod catchers are on by default (with a grace window, and an experimental faction credit that is off). The enemy doctrine, the smarter allied
 > ships and the ship damage are in but **off by default** until they have been tested in the game (each has
 > its own switch in `config.lua`). [DESIGN.md](DESIGN.md) has the research.
 
@@ -17,6 +17,17 @@ you catch it: with your mothership's pod catcher perk or the pod catcher item. W
 allied ship that is closer to a free pod than you are, and within range, catches it. The pilot goes
 to **your** captives, exactly as if you had caught it. Nothing is caught when your captive slots are
 full or when your own mothership perk is on (it already takes every free pod).
+
+You get the first chance: a pod must have been free for `GraceSeconds` (8 by default, so 8 to 10.5 s with the
+scan interval) before an ally takes it. That is quick, the pod is not lost, but it is not instant. A pod you
+catch (or that is destroyed) in that time is simply forgotten.
+
+*Faction credit (0.4.0, experimental, off by default).* With `PodCatchers.Credit = "faction"` the pilot goes to
+your faction instead of your captive slots: an ally within `FactionRange` (1 km) of the pod picks it up, your
+faction gets `FactionPowerPerPilot` (50) Faction Power (the same game call the Faction Power mod uses) and the pod
+is removed. No slot is used. The game's own catch always ends in your captive list, so this mode skips it: the ally
+must already be near the pod (it does not fly it in) and the mission objective "catch a pod" does not complete.
+It is not tested in the game yet, so `"player"` stays the default.
 
 **Enemy doctrine by tier (0.1.0, off by default).** In the game every enemy fighter and frigate ends its
 run with a "close pass": it doubles its speed and dives at you. With this on, the low tiers (pirates, and
@@ -54,6 +65,10 @@ Edit `HardcoreSpaceRealism/scripts/config.lua`, save, restart the game.
 | `PodCatchers.Enabled` | `true` | Allied ships catch free pods. |
 | `PodCatchers.Range` | `5000` | Metres. An ally this close to a pod, and nearer than you, catches it. |
 | `PodCatchers.Interval` | `2.5` | Seconds between checks. |
+| `PodCatchers.GraceSeconds` | `8` | A pod must have been free this long before an ally takes it: you get the first chance. |
+| `PodCatchers.Credit` | `"player"` | `"player"`: the pilot goes to your captives (tested). `"faction"`: Faction Power instead (experimental, not tested). |
+| `PodCatchers.FactionRange` | `1000` | Metres. `"faction"` mode: an ally this close to the pod picks it up. |
+| `PodCatchers.FactionPowerPerPilot` | `50` | `"faction"` mode: Faction Power per pilot (the Faction Power mod pays 300 to 600 for a mission or dungeon). |
 | `EnemyDoctrine.Enabled` | `false` | Low-tier enemies skip the close pass and turn slower. |
 | `EnemyDoctrine.LowRank` | `1` | Enemy rank up to this is low tier (pirates always are). |
 | `EnemyDoctrine.SloppyTurn` | `0.85` | Low-tier turn speed multiplier (1 = unchanged). |

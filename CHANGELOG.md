@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.0 (not released yet)
+
+Pod catchers: a grace window and an experimental faction credit.
+
+- Grace window (`PodCatchers.GraceSeconds`, default 8): a pod is tracked from the first scan that sees it free, and an ally
+  may take it only after that long, so you get the first chance (with the 2.5 s scan the real wait is 8 to 10.5 s). A pod
+  that is caught, destroyed or no longer free is forgotten, and starts a new clock if it is ever free again.
+- Faction credit (`PodCatchers.Credit = "faction"`, **off by default, not tested in the game**): no captive; an ally within
+  `FactionRange` of the pod picks it up, your faction gets `FactionPowerPerPilot` Faction Power (Game_Builder
+  "Add Remove Faction Power") and the pod is removed. The default stays `"player"` (the tested behaviour). Why a separate
+  mode: the pod's own catch ends in `Ship.AddCaptive` on the player's ship whoever "the mother" is, so a faction credit
+  cannot use the game's catch (DESIGN.md section 2).
+- Test hook: the mod sets the global `HSRTest` for the test kit (nothing in the mod reads it).
+
 ## 0.3.0 (not released yet)
 
 NPC hull states, **off by default** until tested in the game (`ShipDamage.Enabled = true` to try them).

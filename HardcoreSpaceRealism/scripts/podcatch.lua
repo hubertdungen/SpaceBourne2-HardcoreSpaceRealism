@@ -1,19 +1,28 @@
 --[[
-  Pod catchers for allies (moved here from Bigger Armies 0.2.0).
+  Pod catchers for allies (moved here from Bigger Armies 0.2.0; grace window and faction credit added in HSR 0.4.0).
 
   The game gives the pod catcher to the player only: the item "Use_PodCatcher" and the mothership perk
   "Mother Pod Catcher" (Q1_Master_Ship:MotherPodCatcher, every 10 s it takes a free pod and calls the
   pod's own CatchByMother). Allied ships catch nothing, so rescue pods drift away or time out.
 
   Here: every few seconds on the game thread (gametick.lua, no LoopAsync), find the free pods
-  (MasterPod_C, tag "FreePod"). A pod that is closer to an allied ship than to you, and inside
-  PodCatchers.Range of that ship, is caught with the game's own MasterPod:CatchByMother(ally ship): the
-  pod flies to the ally, the game's own drone cable animation plays and the pilot lands in YOUR
-  captives (Q1_Master_Ship.Captives), exactly like your own catch.
+  (MasterPod_C, tag "FreePod"). A pod is tracked from the first scan that sees it free and started; only after
+  it has been free for GraceSeconds may an ally take it, so YOU get the first chance (a pod caught, destroyed or no
+  longer free is forgotten). Then a pod that is closer to an allied ship than to you is taken, in one of two ways
+  (PodCatchers.Credit):
 
-  Not done when: the mothership perk is on (it already takes every free pod), your captive slots are full,
-  the pod is not started yet or already being caught. Cost: one FindAllOf per tick; the ship scan only runs
-  while a free pod exists.
+  "player" (default, tested): inside PodCatchers.Range of that ship, the game's own MasterPod:CatchByMother(ally
+      ship): the pod flies to the ally, the game's own drone cable animation plays and the pilot lands in YOUR
+      captives (Q1_Master_Ship.Captives), exactly like your own catch. Not done when your captive slots are full.
+      The pod's own catch flow ends in Ship.AddCaptive on the player's ship whoever "the mother" is (read in the
+      Blueprint), so this is the only credit the game's catch can give.
+  "faction" (experimental, off until tested): no captive. An ally within PodCatchers.FactionRange of the pod picks
+      it up: your faction gets FactionPowerPerPilot Faction Power (Game_Builder "Add Remove Faction Power", the
+      call the Faction Power mod uses) and the pod is removed. Your captive slots are not used and not needed.
+
+  Not done in either mode when: the mothership perk is on (it already takes every free pod), the pod is not
+  started yet or already being caught. Cost: one FindAllOf per tick; the ship scan only runs while a pod is
+  past its grace window.
 ]]
 
 local P = {}
@@ -22,6 +31,7 @@ local POD, ALLY_SHIP, CONTROLLER = "MasterPod_C", "Master_Enemy_C", "Q1Controlle
 local AI_ALLY = 1
 local FLIGHT = 12  -- seconds a caught pod needs to reach the ship; counts against the free captive slots
 local REMEMBER = 90 -- seconds a pod we caught stays on the "already caught" list
+local ADD_POWER = "Add Remove Faction Power" -- Game_Builder: (Amount:Int, out Success?, out CurrentPower)
 
 local function valid(o)
     if o == nil then return false end
@@ -71,6 +81,15 @@ local function playerShip()
     return pawn
 end
 
+-- Game_Builder (the faction's data and Power), reached through the player controller like the Faction Power mod does.
+local function gameBuilder()
+    local pc = FindFirstOf(CONTROLLER)
+    if not valid(pc) then return nil end
+    local b = prop(pc, "GameBuilderRef", nil)
+    if valid(b) then return b end
+    return nil
+end
+
 local function dist2(a, b)
     local dx, dy, dz = a.X - b.X, a.Y - b.Y, a.Z - b.Z
     return dx * dx + dy * dy + dz * dz
@@ -82,28 +101,40 @@ local function loc(o)
     return nil
 end
 
---- start(GT, cfg, log, warn): cfg = { Enabled, Range (metres), Interval (s) }
+--- start(GT, cfg, log, warn): cfg = { Enabled, Range (m), Interval (s), GraceSeconds, Credit, FactionRange (m), FactionPowerPerPilot }
 function P.start(GT, cfg, log, warn)
     if not cfg.Enabled then log("pod catchers off in config.lua") return end
     local range2 = (cfg.Range * 100) ^ 2 -- metres -> UE units (cm)
-    local recent = {}                    -- os.clock() of the last catches (slots in flight)
+    local recent = {}                   -- os.clock() of the last catches (slots in flight)
     local lastFull = false
-    local caught = 0
-    local done = {}                      -- full name of a pod we caught -> os.clock(): never caught twice
+    local caught, credited = 0, 0
+    local warnedPower = false
+    local done = {}                      -- full name of a pod we took -> os.clock(): never taken twice
+    local firstSeen = {}                 -- full name of a free, started pod -> os.clock() of the first scan that saw it free
 
     local function tick()
-        local pods = FindAllOf(POD)
-        if not pods or #pods == 0 then return end
+        -- read each scan from the live config table, so the test kit can switch the credit mode in one launch
+        local grace = math.max(0, math.min(120, tonumber(cfg.GraceSeconds) or 8))
+        local faction = (cfg.Credit == "faction")
+        local fRange2 = ((tonumber(cfg.FactionRange) or 1000) * 100) ^ 2
+        local fPower = math.max(1, math.floor(tonumber(cfg.FactionPowerPerPilot) or 50))
         local t0 = os.clock()
+        local pods = FindAllOf(POD)
+        if not pods or #pods == 0 then firstSeen = {}; return end
         for name, t in pairs(done) do if t0 - t > REMEMBER then done[name] = nil end end
-        local free = {}
+        local free, seen = {}, {}
         for _, pod in ipairs(pods) do
             if alive(pod) and prop(pod, "Started", false) == true and prop(pod, "PodSpawned", false) ~= true
                 and hasTag(pod, "FreePod") then
                 local okN, name = pcall(function() return pod:GetFullName() end)
-                if okN and not done[name] then free[#free + 1] = { actor = pod, name = name } end
+                if okN and not done[name] then
+                    seen[name] = true
+                    if not firstSeen[name] then firstSeen[name] = t0 end
+                    if t0 - firstSeen[name] >= grace then free[#free + 1] = { actor = pod, name = name } end
+                end
             end
         end
+        for name in pairs(firstSeen) do if not seen[name] then firstSeen[name] = nil end end  -- caught, destroyed or no longer free
         if #free == 0 then return end
 
         local ship = playerShip()
@@ -111,20 +142,23 @@ function P.start(GT, cfg, log, warn)
         if prop(ship, "MoahterPodCathcerActive", false) == true then return end -- the perk takes every free pod
 
         local now = os.clock()
-        local kept = {}
-        for _, t in ipairs(recent) do if now - t < FLIGHT then kept[#kept + 1] = t end end
-        recent = kept
-        local used, max = #recent, 0
-        local okC, n = pcall(function() return ship.Captives:GetArrayNum() end)
-        if okC then used = used + n end
-        max = tonumber(prop(ship, "Max Captive", 0)) or 0
-        if max <= 0 then return end -- unknown slot count: better to leave the pods alone
-        if used >= max then
-            if not lastFull then log("captive slots full (" .. used .. "/" .. max .. "): allies leave the pods alone") end
-            lastFull = true
-            return
+        local used, max = 0, 0
+        if not faction then
+            local kept = {}
+            for _, t in ipairs(recent) do if now - t < FLIGHT then kept[#kept + 1] = t end end
+            recent = kept
+            used = #recent
+            local okC, n = pcall(function() return ship.Captives:GetArrayNum() end)
+            if okC then used = used + n end
+            max = tonumber(prop(ship, "Max Captive", 0)) or 0
+            if max <= 0 then return end -- unknown slot count: better to leave the pods alone
+            if used >= max then
+                if not lastFull then log("captive slots full (" .. used .. "/" .. max .. "): allies leave the pods alone") end
+                lastFull = true
+                return
+            end
+            lastFull = false
         end
-        lastFull = false
 
         local pl = loc(ship)
         if not pl then return end
@@ -141,7 +175,7 @@ function P.start(GT, cfg, log, warn)
 
         for _, f in ipairs(free) do
             local pod = f.actor
-            if used >= max then break end
+            if not faction and used >= max then break end
             local pp = loc(pod)
             if pp then
                 local best, bestD = nil, math.huge
@@ -149,17 +183,37 @@ function P.start(GT, cfg, log, warn)
                     local d = dist2(a.loc, pp)
                     if d < bestD then best, bestD = a, d end
                 end
-                if best and bestD <= range2 and bestD < dist2(pl, pp) then
-                    local ok, err = pcall(function() pod:CatchByMother(best.actor) end)
-                    if ok then
-                        done[f.name] = os.clock()
-                        caught = caught + 1
-                        used = used + 1
-                        recent[#recent + 1] = now
-                        log(string.format("ally ship caught a pod %.1f km away (%d so far, slots %d/%d) %s", 
-                            math.sqrt(bestD) / 100000, caught, used, max, (f.name:gsub("^.*%.", ""))))
+                local reach = faction and fRange2 or range2
+                if best and bestD <= reach and bestD < dist2(pl, pp) then
+                    local short = (f.name:gsub("^.*%.", ""))
+                    if faction then
+                        local b = gameBuilder()
+                        local okP = false
+                        if b then okP = pcall(function() b[ADD_POWER](b, fPower, {}, {}) end) end
+                        if okP then
+                            pcall(function() pod:K2_DestroyActor() end)
+                            done[f.name] = os.clock()
+                            firstSeen[f.name] = nil
+                            credited = credited + 1
+                            log(string.format("ally ship picked up a pod %.0f m away: +%d Faction Power (%d so far) %s",
+                                math.sqrt(bestD) / 100, fPower, credited, short))
+                        elseif not warnedPower then
+                            warnedPower = true
+                            warn("pod pickup: Faction Power could not be added (" .. (b and "call failed" or "no Game_Builder") .. "), pods left alone")
+                        end
                     else
-                        warn("pod catch: " .. tostring(err))
+                        local ok, err = pcall(function() pod:CatchByMother(best.actor) end)
+                        if ok then
+                            done[f.name] = os.clock()
+                            firstSeen[f.name] = nil
+                            caught = caught + 1
+                            used = used + 1
+                            recent[#recent + 1] = now
+                            log(string.format("ally ship caught a pod %.1f km away (%d so far, slots %d/%d) %s",
+                                math.sqrt(bestD) / 100000, caught, used, max, short))
+                        else
+                            warn("pod catch: " .. tostring(err))
+                        end
                     end
                 end
             end
@@ -171,7 +225,12 @@ function P.start(GT, cfg, log, warn)
         local ok, err = pcall(tick)
         if not ok then warn("pod catch tick: " .. tostring(err)) end
     end)
-    log(string.format("pod catchers on: range %d m, every %.1f s", cfg.Range, interval))
+    if cfg.Credit == "faction" then
+        log(string.format("pod catchers on (faction credit): ally within %d m picks a pod up after %.0f s, +%d Faction Power, every %.1f s",
+            cfg.FactionRange or 1000, tonumber(cfg.GraceSeconds) or 8, cfg.FactionPowerPerPilot or 50, interval))
+    else
+        log(string.format("pod catchers on: range %d m, grace %.0f s, every %.1f s", cfg.Range, tonumber(cfg.GraceSeconds) or 8, interval))
+    end
 end
 
 return P

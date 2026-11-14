@@ -13,6 +13,21 @@ return {
         Enabled = true,
         Range = 5000,    -- metres: an ally this close to a free pod, and nearer to it than you, catches it
         Interval = 2.5,  -- seconds between checks
+        -- A pod must have been free this long before an ally may take it, so YOU get the first chance: the game's own
+        -- catch needs a few seconds of approach and lock, and the mothership perk takes a pod every 10 s. 8 s is
+        -- quick (the pod is not lost) but not instant. Checks run every Interval, so the real wait is 8 to 10.5 s.
+        GraceSeconds = 8,
+        -- Where the pilot goes:
+        --   "player"  (tested) the game's own catch: the pod flies to the ally and the pilot lands in YOUR captive
+        --             slots, as if you had caught it. Nothing is caught when your slots are full.
+        --   "faction" (experimental, NOT tested in the game yet) no captive: an ally within FactionRange of the pod
+        --             picks it up, your faction gets FactionPowerPerPilot Faction Power (the Faction Power currency,
+        --             the same game call the Faction Power mod uses) and the pod is removed. Your slots are not used.
+        --             The game's own catch always ends in YOUR captive list, so this skips it: the ally must be close
+        --             (it does not fly the pod in) and the mission objective "catch a pod" is not completed.
+        Credit = "player",
+        FactionRange = 1000,        -- metres: "faction" mode, an ally this close to the pod picks it up
+        FactionPowerPerPilot = 50,  -- "faction" mode (the Faction Power mod pays 300-600 for a mission or a dungeon)
     },
 
     -- Enemy fighters and frigates by tier. In the game every enemy ends a run with a "close pass": it doubles its
