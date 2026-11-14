@@ -184,3 +184,29 @@ test kit (outside this repository) drives it with scripted ships.
    repair puts the base back; with the doctrine on the pirate's turn is base x0.85 x stage; capital and player untouched.
 5. Cost: 30 s with six enemy and four allied frigates and everything on, log size, private bytes every 30 s, the longest
    gap between timer ticks, no crash.
+
+## 8. In-game test results (2026-11-14, three launches of the 0.4.0 build)
+
+Own test slot (a copy of "Entered New System"), HSR alone plus Bigger Armies 0.2.1 (no `podcatch.lua`) switched on, dev console,
+scripted ships. Launch 1 ran the 0.1 to 0.4 list, launches 2 and 3 repeated what had not been checked. Memory stayed flat
+(about 10.1 GB private), no crash, no hang. Test kit and logs are outside this repository.
+
+| Part | Result |
+|---|---|
+| Pod catch, player credit (8 cases) | PASS: caught after the grace window (about 11 s after the pod appeared), left alone when you are nearer, out of range, slots full, perk on, not an ally, idle |
+| Grace window | PASS: nothing at 3 s and 6 s, the catch 8 to 11 s after the pod appeared; a pod destroyed inside the window is forgotten without error |
+| Bigger Armies 0.2.1 beside HSR | PASS: BA logs "+10 general slots (up to 22)", HSR catches the pods |
+| Guard, real source of `main.lua` run in the game with the real Mods path | PASS, 7 of 7: 0.2.1 on (no `podcatch.lua`) = HSR catches; a stub `podcatch.lua` standing in for 0.2.0 on = HSR leaves it; its PodCatchers off, BA off in its config, `mods.txt` says 0 = HSR catches |
+| Faction credit | PASS: +50 Faction Power per pod (28843 to 28893 to 28943), pod removed, captive slots untouched (also with 0 of 0 slots), grace window held, out of range and player-nearer and perk-on left alone. With a 1 km range nothing was picked up (launch 2): the ally flew 1.2 to 1.4 km in 20 s, so the default is now 3 km. The "waits" debug note in the log shows why a pod is still waiting |
+| Hull states | PASS: stages 1, 2, 3 gave the expected speed, turn and shield recharge, one write per crossing, unchanged over 22 s, `CalculateStats` re-applied within one scan, repair put the base back, doctrine and hull combine |
+| Doctrine, values | PASS: `CloseTrueBeheviur` 9099 to 0 and turn 60 to 51 on low-tier enemies, held, allies untouched |
+| Doctrine, in flight | PASS (one pirate, one vanilla ally as control, same fight): the ally went `Close?` = true with `SpeedMultipler` 2.0 at about 265 m and closed to under 100 m; the pirate, inside 98 to 265 m of its target many times, never had `Close?` and kept 1.2 |
+| Doctrine scope | enemies only (`AITypes` 0). Factions seen: 3 Pirates, and 0 Morthra and 1 Falron frigates at rank 1 (every scripted M_Frigate comes out at rank 1, so a military ship counted as low tier by rank, as designed). Aliens (4), none (5) and the player's faction (6) are now excluded in code. A rank 4 control could be set after the spawn (the game resets rank during the first seconds) but the ordered ships never closed on you, so the rank-4 flight comparison was not made |
+| Retreat flag | PARTLY: the flag is accepted and the hurt ally (15 %) flew back toward its root (1.0 km to 0.2 km in 40 s) and its distance to the enemy grew from 160 to about 490 m; the game clears the flag again within about 2 s while the ship is engaged, so the mod sets it again on each scan (seen as short flickers). After repair it set the base values back and the distance to the enemy fell again. The timeout path (120 s) worked. Not shown: a clean, decisive withdrawal |
+| Shared target | NOT RECOMMENDED: an order from the mod or by hand sets `MainTarget` and `MainTargetSettedBy Order`; it stuck for at least 30 s while the target was near and fought, and was cleared by the AI about 12 s after the target was far (launch 2). The ally then stayed without a target for 70 s with an enemy 500 m away shooting at it: the "ordered" flag seems to keep the AI from choosing a target. In launch 3 the ordered far target was not cleared in 100 s and clearing the flag by hand changed nothing, but the world was nearly standing still then. So it ships OFF |
+| `TryToGetBack?` on a healthy ally, ally inside a squad | INCONCLUSIVE: the world was nearly standing still during the launch 3 fight phase (ships moved metres in 2 minutes) and the save has no squad ship |
+| Cost | the HSR log grew about 1.2 to 1.4 KB in 35 s with ten frigates and every part on; no tick gap over 2 s; the fleet fight itself did not engage (the world stood still), so a real fleet fight is still not measured |
+
+What stays open: a decisive retreat (maybe `TryToGetBack?`, which the AI uses itself after five chase passes), a squad ally, the
+rank 4 flight control, a real fleet fight, and whether the near-standstill of far ships is the game's own optimization layers
+(`OpLayerIndex`, `CheapModeON?`, read in the Blueprint) or the window losing focus.

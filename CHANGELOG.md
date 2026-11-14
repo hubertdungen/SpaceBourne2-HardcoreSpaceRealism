@@ -2,6 +2,9 @@
 
 ## 0.4.0 (not released yet)
 
+In-game test 2026-11-14 (two launches, see DESIGN.md): pods, the faction credit, the grace window, the hull stages and the doctrine
+values were checked; the faction range default went from 1 km to 3 km and the shared target went off by default.
+
 Pod catchers: a grace window and an experimental faction credit.
 
 - Grace window (`PodCatchers.GraceSeconds`, default 8): a pod is tracked from the first scan that sees it free, and an ally

@@ -37,7 +37,7 @@ function A.start(GT, cfg, log, warn)
     local rt = type(cfg.Retreat) == "table" and cfg.Retreat or {}
     local sh = type(cfg.ShareTarget) == "table" and cfg.ShareTarget or {}
     local retreatOn = rt.Enabled ~= false
-    local shareOn = sh.Enabled ~= false
+    local shareOn = sh.Enabled == true   -- off unless switched on: see DESIGN.md section 3 (run 2)
     local below = num(rt.Below, 0.25, 0.05, 0.9)
     local resume = math.max(below + 0.1, num(rt.ResumeAbove, 0.6, 0.15, 1.0))
     local maxSec = num(rt.MaxSeconds, 120, 10, 1800)

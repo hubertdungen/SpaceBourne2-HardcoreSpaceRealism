@@ -2,7 +2,7 @@
 
 A [url=https://github.com/UE4SS-RE/RE-UE4SS]UE4SS[/url] Lua mod: the space counterpart of [url=https://github.com/hubertdungen/SpaceBourne2-HardcoreTacticalRealism]Hardcore Tactical Realism[/url]. Everything is on by default, automatic, with no keys and no menus. Part of the SpaceBourne 2 realism set.
 
-[b]Status: 0.4.0.[/b] The ally pod catchers are on by default (with a grace window, and an experimental faction credit that is off). The enemy doctrine, the smarter allied ships and the ship damage are in but [b]off by default[/b] until they have been tested in the game (each has its own switch in config.lua). [url=https://github.com/hubertdungen/SpaceBourne2-HardcoreSpaceRealism/blob/main/DESIGN.md]DESIGN.md[/url] has the research.
+[b]Status: 0.4.0.[/b] The ally pod catchers are on by default (with a grace window, and a faction credit that is off by default). The enemy doctrine, the smarter allied ships and the ship damage are in but [b]off by default[/b] until they have been tested in the game (each has its own switch in config.lua). [url=https://github.com/hubertdungen/SpaceBourne2-HardcoreSpaceRealism/blob/main/DESIGN.md]DESIGN.md[/url] has the research.
 
 [line]
 [size=5][b]What it does[/b][/size]
@@ -11,11 +11,11 @@ A [url=https://github.com/UE4SS-RE/RE-UE4SS]UE4SS[/url] Lua mod: the space count
 
 You get the first chance: a pod must have been free for GraceSeconds (8 by default, so 8 to 10.5 s with the scan interval) before an ally takes it. That is quick, the pod is not lost, but it is not instant. A pod you catch (or that is destroyed) in that time is simply forgotten.
 
-[i]Faction credit (0.4.0, experimental, off by default).[/i] With PodCatchers.Credit = "faction" the pilot goes to your faction instead of your captive slots: an ally within FactionRange (1 km) of the pod picks it up, your faction gets FactionPowerPerPilot (50) Faction Power (the same game call the Faction Power mod uses) and the pod is removed. No slot is used. The game's own catch always ends in your captive list, so this mode skips it: the ally must already be near the pod (it does not fly it in) and the mission objective "catch a pod" does not complete. It is not tested in the game yet, so "player" stays the default.
+[i]Faction credit (0.4.0, off by default).[/i] With PodCatchers.Credit = "faction" the pilot goes to your faction instead of your captive slots: an ally within FactionRange (3 km) of the pod picks it up, your faction gets FactionPowerPerPilot (50) Faction Power (the same game call the Faction Power mod uses) and the pod is removed. No slot is used. The game's own catch always ends in your captive list, so this mode skips it: the ally must already be near the pod (it does not fly it in) and the mission objective "catch a pod" does not complete. Tested in the game (2026-11-14): the Faction Power rose by 50 per pod, the pod was removed, nothing was used from the captive slots (even with them full) and the grace window held. Allies move about 60 m/s, which is why the range is 3 km. "player" stays the default until it is decided which credit the set wants.
 
 [b]Enemy doctrine by tier (0.1.0, off by default).[/b] In the game every enemy fighter and frigate ends its run with a "close pass": it doubles its speed and dives at you. With this on, the low tiers (pirates, and ranks up to LowRank) never do that, so they keep shooting from their normal attack distance, and they turn a little slower (sloppy). Higher ranks of the military factions fly as the game has them. Switch it on with EnemyDoctrine.Enabled = true; it becomes the default once it has been tested.
 
-[b]Smarter allied ships (0.2.0, off by default).[/b] In the game an allied fighter or frigate fights until it dies. With this on, an ally whose armor and shield are below 25 % pulls back with the game's own "return to spawn" flag (it flies to where it came from, or to your ship, and the game stops it there). It rejoins when it is above 60 % again (shields recharge by themselves) or after two minutes, whichever comes first. Allies that are not in a squad also attack the target you have locked, once per new target. Never touched: your ship, enemies, aliens, civilians, cargo, drones, capital ships, command and mother ships. Switch it on with AlliedShips.Enabled = true; it becomes the default once it has been tested.
+[b]Smarter allied ships (0.2.0, off by default).[/b] In the game an allied fighter or frigate fights until it dies. With this on, an ally whose armor and shield are below 25 % pulls back with the game's own "return to spawn" flag (it flies to where it came from, or to your ship, and the game stops it there). It rejoins when it is above 60 % again (shields recharge by themselves) or after two minutes, whichever comes first. Allies that are not in a squad can also be sent after the target you have locked (ShareTarget.Enabled, [b]off[/b]: in the game an ordered ally keeps that one target and can go passive when it is lost). Never touched: your ship, enemies, aliens, civilians, cargo, drones, capital ships, command and mother ships. Switch it on with AlliedShips.Enabled = true; it becomes the default once it has been tested.
 
 [b]Ship damage that matters (0.3.0, off by default).[/b] The game has one damage model: shield, then armor, with no engine or weapon parts. So a ship's state comes from its health (armor + shield against their maximum). Below 66 % its engines and turning drop by 15 %; below 50 % its shield also recharges at half speed; below 33 % engines and turning are at 65 %. Each stage is written once when the ship crosses it, to constants the game computes once per ship (and re-applied if the game computes them again). Enemy and allied fighters and frigates. [b]Your own ship is not touched[/b], nor are aliens, civilians, cargo, drones or capital ships. Switch it on with ShipDamage.Enabled = true; it becomes the default once it has been tested.
 
@@ -35,8 +35,8 @@ Edit HardcoreSpaceRealism/scripts/config.lua, save, restart the game.
 [*][b]PodCatchers.Range[/b]: 5000 - Metres. An ally this close to a pod, and nearer than you, catches it.
 [*][b]PodCatchers.Interval[/b]: 2.5 - Seconds between checks.
 [*][b]PodCatchers.GraceSeconds[/b]: 8 - A pod must have been free this long before an ally takes it: you get the first chance.
-[*][b]PodCatchers.Credit[/b]: "player" - "player": the pilot goes to your captives (tested). "faction": Faction Power instead (experimental, not tested).
-[*][b]PodCatchers.FactionRange[/b]: 1000 - Metres. "faction" mode: an ally this close to the pod picks it up.
+[*][b]PodCatchers.Credit[/b]: "player" - "player": the pilot goes to your captives (tested). "faction": Faction Power instead (tested in the game).
+[*][b]PodCatchers.FactionRange[/b]: 3000 - Metres. "faction" mode: an ally this close to the pod picks it up.
 [*][b]PodCatchers.FactionPowerPerPilot[/b]: 50 - "faction" mode: Faction Power per pilot (the Faction Power mod pays 300 to 600 for a mission or dungeon).
 [*][b]EnemyDoctrine.Enabled[/b]: false - Low-tier enemies skip the close pass and turn slower.
 [*][b]EnemyDoctrine.LowRank[/b]: 1 - Enemy rank up to this is low tier (pirates always are).
@@ -48,7 +48,7 @@ Edit HardcoreSpaceRealism/scripts/config.lua, save, restart the game.
 [*][b]AlliedShips.Retreat.ResumeAbove[/b]: 0.6 - It rejoins the fight above this.
 [*][b]AlliedShips.Retreat.MaxSeconds[/b]: 120 - It rejoins after this long whatever its health (then waits 60 s).
 [*][b]AlliedShips.Retreat.MaxDistance[/b]: 3000 - Metres from its root. Farther away it stays in the fight.
-[*][b]AlliedShips.ShareTarget.Enabled[/b]: true - Allies outside a squad attack your locked target.
+[*][b]AlliedShips.ShareTarget.Enabled[/b]: false - Allies outside a squad are sent after your locked target (off: see above).
 [*][b]AlliedShips.ShareTarget.Range[/b]: 20000 - Metres from you: only allies this close are told.
 [*][b]AlliedShips.Interval[/b]: 3.0 - Seconds between scans.
 [*][b]ShipDamage.Enabled[/b]: false - NPC ships fly, turn and recharge shields worse as they lose hull.

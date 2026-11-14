@@ -20,13 +20,13 @@ return {
         -- Where the pilot goes:
         --   "player"  (tested) the game's own catch: the pod flies to the ally and the pilot lands in YOUR captive
         --             slots, as if you had caught it. Nothing is caught when your slots are full.
-        --   "faction" (experimental, NOT tested in the game yet) no captive: an ally within FactionRange of the pod
+        --   "faction" (works in the game, tested 2026-11-14, but a different feel from "player") no captive: an ally within FactionRange of the pod
         --             picks it up, your faction gets FactionPowerPerPilot Faction Power (the Faction Power currency,
         --             the same game call the Faction Power mod uses) and the pod is removed. Your slots are not used.
         --             The game's own catch always ends in YOUR captive list, so this skips it: the ally must be close
         --             (it does not fly the pod in) and the mission objective "catch a pod" is not completed.
         Credit = "player",
-        FactionRange = 1000,        -- metres: "faction" mode, an ally this close to the pod picks it up
+        FactionRange = 3000,        -- metres: "faction" mode, an ally this close to the pod picks it up (allies move about 60 m/s, so 1 km is too tight)
         FactionPowerPerPilot = 50,  -- "faction" mode (the Faction Power mod pays 300-600 for a mission or a dungeon)
     },
 
@@ -60,7 +60,7 @@ return {
             MaxDistance = 3000,  -- metres from its root; farther than that it stays in the fight (the game moves a returning ship beyond 4.6 km onto its root)
         },
         ShareTarget = {
-            Enabled = true,      -- allies outside a squad attack the target you have locked (once per new target)
+            Enabled = false,     -- OFF: allies outside a squad attack the target you have locked (once per new target). The order marks the ally "ordered" and the AI then keeps (or loses) that one target; see DESIGN.md
             Range = 20000,       -- metres: only allies this close to you are told
         },
     },
