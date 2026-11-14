@@ -141,9 +141,6 @@ if allyCfg.Enabled then
     end
 end
 
--- For tests only (read by the dev console in the test kit; nothing in the mod uses it).
-HSRTest = { version = VERSION, MODS = MODS, baHasPodCatchers = baHasPodCatchers, podCfg = podCfg }
-
 local hullCfg = type(cfg.ShipDamage) == "table" and cfg.ShipDamage or {}
 if hullCfg.Enabled == nil then hullCfg.Enabled = false end
 local hullOn = "off"

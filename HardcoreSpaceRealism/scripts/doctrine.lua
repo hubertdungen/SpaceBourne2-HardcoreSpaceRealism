@@ -9,7 +9,8 @@
   Here the low tiers (pirates, and ranks up to LowRank) never start that pass: their CloseTrueBeheviur is set to 0,
   so they keep flying their normal attack moves at normal speed (the game's own band AttackDistMin..AttackDistMax),
   and they turn a little slower (sloppy: ShipBaseTurnSpeed x SloppyTurn). Higher ranks of the military factions
-  are left as the game has them.
+  are left as the game has them. Never touched: allied ships (AITypes 1), aliens, ships with no faction, the player's
+  own faction (Earthling), creatures, non-combat ships.
 
   Only constants are written: CloseTrueBeheviur is never written by the game; ShipBaseTurnSpeed is written when the
   game calculates the ship's stats, so it goes through shipmods.lua (shared with hull.lua): base x multipliers,
@@ -23,6 +24,7 @@ local D = {}
 local SHIP = "Base_Frigate_C"
 local AI_ENEMY = 0
 local FACTION_PIRATES = 3
+local FACTION_SKIP = { [4] = true, [5] = true, [6] = true }  -- Aliens, None, Earthling (the player's faction)
 
 local function valid(o)
     if o == nil then return false end
@@ -54,8 +56,12 @@ function D.start(GT, cfg, log, warn)
     local seen = {}  -- full name -> true (ships tracked; the turn values live in shipmods.lua)
     local touched, lastCount = 0, -1
 
+    -- Factions (enum Factions): 0 Morthra, 1 Falron, 2 Xeghan (the military factions), 3 Pirates, 4 Aliens, 5 None,
+    -- 6 Earthling (the player's own faction). Left as the game flies them: aliens, no faction and the player's faction.
     local function isLowTier(ship)
-        if prop(ship, "Faction", -1) == FACTION_PIRATES then return true end
+        local faction = prop(ship, "Faction", -1)
+        if FACTION_SKIP[faction] then return false end
+        if faction == FACTION_PIRATES then return true end
         local rank = prop(ship, "Enemy_Rank", 99)
         return rank <= lowRank
     end

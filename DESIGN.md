@@ -113,8 +113,8 @@ check in the game: which wins when `mods.txt` says `: 0` and an `enabled.txt` ex
 - Defaults of `Base_Frigate_C`: `AttackDistMin` 160 m, `AttackDistMax` 840 m, `CloseTrueBeheviur` 91 m (x `RangeMultipler`,
   2 against the player's ship), `CloseBoolDistance` 300 m. The pass is only entered below the attack band.
 - **In the code (`doctrine.lua`)**: every `Interval` s, `FindAllOf("Base_Frigate_C")`; for each living enemy
-  (`AITypes` 0, not a creature, non-combat ship or character shooter) of low tier (`Faction` 3 Pirates, or
-  `Enemy_Rank` <= `LowRank`): `CloseTrueBeheviur = 0` once, and `ShipBaseTurnSpeed x SloppyTurn`, re-applied when
+  (`AITypes` 0, not a creature, non-combat ship or character shooter) of low tier (`Faction` 3 Pirates, or a military
+  faction (0 Morthra, 1 Falron, 2 Xeghan) at `Enemy_Rank` <= `LowRank`; never aliens 4, none 5 or the player's own faction 6): `CloseTrueBeheviur = 0` once, and `ShipBaseTurnSpeed x SloppyTurn`, re-applied when
   the game recalculates the ship's stats and replaces our value. Military ranks above `LowRank` are untouched
   (disciplined = as the game flies them). Later: hold the band, share targets, retreat when badly damaged.
 - **Not verified in the game**: whether `CloseTrueBeheviur = 0` really removes the pass (the pass is also entered
@@ -165,12 +165,12 @@ check in the game: which wins when `mods.txt` says `: 0` and an `enabled.txt` ex
 
 One launch covers 0.1.0, 0.2.0 and 0.3.0: a copy of a space save in a test slot, this mod alone plus the dev
 console, every new part switched on in the test copy of `config.lua` (they are off by default in the repo). The
-test kit (outside this repository) drives it with scripted ships; `HSRTest` is a global the mod sets for it.
+test kit (outside this repository) drives it with scripted ships.
 1. Pods: the eight Bigger Armies cases with longer waits (grace 8 s + flight 12 s: positive cases 30 s, negative ones
    16 s so a bug would show), plus case 9 (nothing at 3 s and 6 s, the catch only after about 8 to 10.5 s), case 10 (a pod
    destroyed inside the grace window is forgotten), case 11 (`Credit = "faction"`: an ally 500 m from the pod, slots
    full, Faction Power rises by 50, pod removed, captive count unchanged) and case 12 (faction mode, ally 4 km away:
-   untouched). The test kit switches the mode live through `HSRTest.podCfg`; the Bigger Armies guard with the real `Mods` path (a Bigger Armies 0.2.0
+   untouched). (Run 2 runs the faction cases in a launch whose test config has `Credit = "faction"`.) The Bigger Armies guard with the real `Mods` path (a Bigger Armies 0.2.0
    snapshot sits in the test copy, off: the guard is called with `mods.txt` saying `BiggerArmies : 1`, then with its
    `PodCatchers` off; booting with it on is covered offline, 7 mock folders, and by the log line).
 2. Doctrine: scripted pirate and military frigates; read the values before and after, sample the distance

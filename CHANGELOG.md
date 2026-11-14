@@ -12,7 +12,9 @@ Pod catchers: a grace window and an experimental faction credit.
   "Add Remove Faction Power") and the pod is removed. The default stays `"player"` (the tested behaviour). Why a separate
   mode: the pod's own catch ends in `Ship.AddCaptive` on the player's ship whoever "the mother" is, so a faction credit
   cannot use the game's catch (DESIGN.md section 2).
-- Test hook: the mod sets the global `HSRTest` for the test kit (nothing in the mod reads it).
+- Enemy doctrine scope: never touches aliens (4), ships with no faction (5) or the player's own faction (Earthling, 6), besides
+  allied ships, creatures and non-combat ships (the doctrine only ever applied to `AITypes` 0). Low tier = pirates (3) or
+  a military faction (Morthra 0, Falron 1, Xeghan 2) at rank <= `LowRank`.
 
 ## 0.3.0 (not released yet)
 
