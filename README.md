@@ -80,7 +80,7 @@ Edit `HardcoreSpaceRealism/scripts/config.lua`, save, restart the game.
 | `EnemyDoctrine.Enabled` | `true` | Low-tier enemies skip the close pass and turn slower. |
 | `EnemyDoctrine.LowRank` | `1` | Enemy rank up to this is low tier (pirates always are). |
 | `EnemyDoctrine.SloppyTurn` | `0.85` | Low-tier turn speed multiplier (1 = unchanged). |
-| `EnemyDoctrine.Interval` | `3.0` | Seconds between scans. |
+| `EnemyDoctrine.Interval` | `3.0` | Seconds between checks of each ship. |
 | `AlliedShips.Enabled` | `true` | Allies retreat when badly damaged (and, if switched on, attack your locked target). |
 | `AlliedShips.Retreat.Enabled` | `true` | Retreat part of the above. |
 | `AlliedShips.Retreat.Below` | `0.25` | Health ratio (armor + shield) under which an ally pulls back. |
@@ -89,11 +89,11 @@ Edit `HardcoreSpaceRealism/scripts/config.lua`, save, restart the game.
 | `AlliedShips.Retreat.MaxDistance` | `3000` | Metres from its root. Farther away it stays in the fight. |
 | `AlliedShips.ShareTarget.Enabled` | `false` | Allies outside a squad are sent after your locked target (off: see above). |
 | `AlliedShips.ShareTarget.Range` | `20000` | Metres from you: only allies this close are told. |
-| `AlliedShips.Interval` | `3.0` | Seconds between scans. |
+| `AlliedShips.Interval` | `3.0` | Seconds between checks of each ship. |
 | `ShipDamage.Enabled` | `true` | NPC ships fly, turn and recharge shields worse as they lose hull. |
 | `ShipDamage.Enemies` / `Allies` | `true` | Which ships it applies to. |
 | `ShipDamage.Stages` | 66 / 50 / 33 % | `Below` (health ratio) with `Speed`, `Turn` and `Shield` multipliers; the deepest stage reached applies. |
-| `ShipDamage.Interval` | `3.0` | Seconds between scans. |
+| `ShipDamage.Interval` | `3.0` | Seconds between checks of each ship. |
 | `Debug` | `false` | Writes what the mod does to `hardcorespacerealism.log`. |
 
 ## Works with Bigger Armies

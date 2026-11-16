@@ -98,7 +98,14 @@ local GT = require("gametick")
 GT.log = function(msg) warn(msg) end
 GT.drive(GT.HUD_TICK, "hud")
 GT.drive(GT.FOOT_TICK, "foot")
-GT.boot()
+local okReg, Reg = pcall(require, "registry")
+if okReg then
+    Reg.init(GT, log, warn)
+    GT.boot(function() Reg.boot() end)   -- hooks the ship and pod classes once they are loaded (registry.lua)
+else
+    warn("registry.lua: " .. tostring(Reg))
+    GT.boot()
+end
 
 local podsOn = "off"
 if podCfg.Enabled then

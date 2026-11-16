@@ -16,11 +16,12 @@
   game calculates the ship's stats, so it goes through shipmods.lua (shared with hull.lua): base x multipliers,
   checked again every scan and re-applied if the game changed it.
   Nothing the AI rewrites every cycle (SpeedMultipler, TurnSpeedMultipler, RangeMultipler...) is touched.
-  Cost: the shared ship scan (shiputil.lua: one FindAllOf for doctrine, hull and allies together, none on foot);
+  Cost: no scan (the ships come from registry.lua, a few per call, each ship about once per Interval; nothing on foot);
   a few property reads per ship; writes only when needed.
 ]]
 local Mods = require("shipmods")
 local U = require("shiputil")
+local Reg = require("registry")
 local D = {}
 
 local SHIP = "Base_Frigate_C"
@@ -57,6 +58,7 @@ function D.start(GT, cfg, log, warn)
     local sloppy = math.max(0.3, math.min(1.0, tonumber(cfg.SloppyTurn) or 0.85))
     local seen = {}  -- full name -> true (ships tracked; the turn values live in shipmods.lua)
     local touched, lastCount = 0, -1
+    local interval = math.max(1, cfg.Interval or 3)
 
     -- Factions (enum Factions): 0 Morthra, 1 Falron, 2 Xeghan (the military factions), 3 Pirates, 4 Aliens, 5 None,
     -- 6 Earthling (the player's own faction). Left as the game flies them: aliens, no faction and the player's faction.
@@ -68,48 +70,52 @@ function D.start(GT, cfg, log, warn)
         return rank <= lowRank
     end
 
-    local function tick()
-        local ships = U.frigates()   -- the shared scan; nil on foot: nothing is scanned or touched
-        if not ships or #ships == 0 then return end
-        local cur = {}
-        for _, s in ipairs(ships) do
-            if alive(s) and prop(s, "AITypes", -1) == AI_ENEMY and prop(s, "Dead?", false) ~= true
-                and prop(s, "Creature?", false) ~= true and prop(s, "Non_combat_Ship", false) ~= true
-                and prop(s, "CharacterShooter?", false) ~= true and isLowTier(s) then
-                local okN, name = pcall(function() return s:GetFullName() end)
-                if okN then
-                    cur[name] = true
-                    seen[name] = true
-                    local close0 = prop(s, "CloseTrueBeheviur", 0)
-                    local did = {}
-                    if close0 > 0 then
-                        local ok = pcall(function() s.CloseTrueBeheviur = 0 end)
-                        if ok then did[#did + 1] = string.format("close pass off (was %.0f)", close0) end
-                    end
-                    -- turn: base x multipliers; the game's own value is the base, re-read when the game
-                    -- recalculated the ship's stats and replaced our value
-                    local turned = Mods.apply(s, name, "doctrine", { Turn = sloppy })
-                    if turned ~= "" then did[#did + 1] = turned end
-                    if #did > 0 then
-                        touched = touched + 1
-                        log(string.format("doctrine %s faction %s rank %s level %s: %s",
-                            (name:gsub("^.*%.", "")), tostring(prop(s, "Faction", "?")), tostring(prop(s, "Enemy_Rank", "?")),
-                            tostring(prop(s, "Level", "?")), table.concat(did, ", ")))
-                    end
-                end
+    local tracked = 0
+    local function one(s, name)
+        if alive(s) and prop(s, "AITypes", -1) == AI_ENEMY and prop(s, "Dead?", false) ~= true
+            and prop(s, "Creature?", false) ~= true and prop(s, "Non_combat_Ship", false) ~= true
+            and prop(s, "CharacterShooter?", false) ~= true and isLowTier(s) then
+            if not seen[name] then
+                seen[name] = true
+                tracked = tracked + 1
             end
+            local close0 = prop(s, "CloseTrueBeheviur", 0)
+            local did = {}
+            if close0 > 0 then
+                local ok = pcall(function() s.CloseTrueBeheviur = 0 end)
+                if ok then did[#did + 1] = string.format("close pass off (was %.0f)", close0) end
+            end
+            -- turn: base x multipliers; the game's own value is the base, re-read when the game
+            -- recalculated the ship's stats and replaced our value
+            local turned = Mods.apply(s, name, "doctrine", { Turn = sloppy })
+            if turned ~= "" then did[#did + 1] = turned end
+            if #did > 0 then
+                touched = touched + 1
+                log(string.format("doctrine %s faction %s rank %s level %s: %s",
+                    (name:gsub("^.*%.", "")), tostring(prop(s, "Faction", "?")), tostring(prop(s, "Enemy_Rank", "?")),
+                    tostring(prop(s, "Level", "?")), table.concat(did, ", ")))
+            end
+        elseif seen[name] then
+            seen[name] = nil
+            tracked = tracked - 1
         end
-        for name in pairs(seen) do if not cur[name] then seen[name] = nil end end
-        local n = 0
-        for _ in pairs(cur) do n = n + 1 end
-        if n ~= lastCount then lastCount = n; log("doctrine: " .. n .. " low-tier enemy ships tracked, " .. touched .. " changes so far") end
+    end
+    Reg.onDrop(function(kind, e)
+        if kind == "ships" and e.name and seen[e.name] then seen[e.name] = nil; tracked = tracked - 1 end
+    end)
+
+    -- a few ships per call, every ship about once per Interval (registry.lua); nothing on foot
+    local cursor = {}
+    local function tick()
+        if not Reg.inShip() then return end
+        Reg.slice("ships", cursor, interval, one)
+        if tracked ~= lastCount then lastCount = tracked; log("doctrine: " .. tracked .. " low-tier enemy ships tracked, " .. touched .. " changes so far") end
     end
 
-    local interval = math.max(1, cfg.Interval or 3)
-    GT.every(interval, function()
+    GT.every(Reg.SLICE, function()
         local ok, err = pcall(tick)
         if not ok then warn("doctrine tick: " .. tostring(err)) end
-    end)
+    end, 0.05)
     log(string.format("enemy doctrine on: low tier = pirates or rank <= %d, turn x%.2f, every %.1f s", lowRank, sloppy, interval))
 end
 

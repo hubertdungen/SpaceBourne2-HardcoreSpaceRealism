@@ -16,10 +16,11 @@
      is pointed at the player's locked target with the game's own Master_Enemy:SetOrderAttackTargetFromTacticMap
      (sets MainTarget, calls TargetIsChanged, marks the target as ordered), once per new target.
 
-  Cost: the shared one-second ship scan (shiputil.lua) every Interval seconds; reads per ally; writes only when
-  a threshold is crossed or a target changes. No hooks.
+  Cost: no scan: the ships come from registry.lua, a few per call, each about once per Interval, nothing on foot; reads
+  per ally; writes only when a threshold is crossed or a target changes. No hooks of its own.
 ]]
 local U = require("shiputil")
+local Reg = require("registry")
 
 local A = {}
 
@@ -93,46 +94,45 @@ function A.start(GT, cfg, log, warn)
         end
     end
 
-    local lastCount = -1
+    local lastCount, nrec = -1, 0
+    local now, player, lt, ltName, pl   -- the context of the current slice
+    local function one(s, name)
+        if U.kind(s) ~= "ally" then
+            if recs[name] then recs[name] = nil; nrec = nrec - 1 end
+            return
+        end
+        local rec = recs[name]
+        if not rec then rec = {}; recs[name] = rec; nrec = nrec + 1 end
+        local h = U.health(s)
+        if retreatOn and h then retreatStep(s, name, rec, h, now, player) end
+        if shareOn and lt and ltName and pl and not rec.retreating then shareStep(s, name, rec, lt, ltName, pl) end
+    end
+    Reg.onDrop(function(k, e) if k == "ships" and e.name and recs[e.name] then recs[e.name] = nil; nrec = nrec - 1 end end)
+
+    local interval = math.max(1, tonumber(cfg.Interval) or 3)
+    local cursor = {}
     local function tick()
-        local ships = U.frigates()
-        if not ships then return end   -- on foot: no scan, records kept
-        local now = os.clock()
-        local player = U.playerShip()
-        local lt, ltName, pl
+        if not Reg.inShip() or Reg.count("ships") == 0 then return end
+        now = os.clock()
+        player = U.playerShip()
+        lt, ltName, pl = nil, nil, nil
         if shareOn and player then
             local t = U.prop(player, "LockedTarget", nil)
             if U.alive(t) and U.num(t, "AITypes", -1) == U.AI_ENEMY and U.prop(t, "Dead?", false) ~= true then
                 lt, ltName, pl = t, U.fullName(t), U.loc(player)
             end
         end
-        local cur, n = {}, 0
-        for _, s in ipairs(ships) do
-            if U.kind(s) == "ally" then
-                local name = U.fullName(s)
-                if name then
-                    cur[name] = true
-                    n = n + 1
-                    local rec = recs[name]
-                    if not rec then rec = {}; recs[name] = rec end
-                    local h = U.health(s)
-                    if retreatOn and h then retreatStep(s, name, rec, h, now, player) end
-                    if shareOn and lt and ltName and pl and not rec.retreating then shareStep(s, name, rec, lt, ltName, pl) end
-                end
-            end
-        end
-        for name in pairs(recs) do if not cur[name] then recs[name] = nil end end
-        if n ~= lastCount then
-            lastCount = n
-            log(string.format("allied ships: %d tracked, %d retreats, %d target orders so far", n, retreats, shares))
+        Reg.slice("ships", cursor, interval, one)
+        if nrec ~= lastCount then
+            lastCount = nrec
+            log(string.format("allied ships: %d tracked, %d retreats, %d target orders so far", nrec, retreats, shares))
         end
     end
 
-    local interval = math.max(1, tonumber(cfg.Interval) or 3)
-    GT.every(interval, function()
+    GT.every(Reg.SLICE, function()
         local ok, err = pcall(tick)
         if not ok then warn("allies tick: " .. tostring(err)) end
-    end)
+    end, 0.35)
     log(string.format("allied ships on: retreat %s (below %.0f %%, back above %.0f %%, max %.0f s), shared target %s, every %.1f s",
         retreatOn and "on" or "off", below * 100, resume * 100, maxSec, shareOn and "on" or "off", interval))
 end

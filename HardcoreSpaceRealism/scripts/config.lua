@@ -39,7 +39,7 @@ return {
         Enabled = true,
         LowRank = 1,        -- enemy rank (0 = weakest); pirates count as low tier whatever their rank
         SloppyTurn = 0.85,  -- low-tier turn speed x this (1 = unchanged)
-        Interval = 3.0,     -- seconds between scans
+        Interval = 3.0,     -- seconds between checks of each ship
     },
 
     -- Allied fighters and frigates (not the capital, cargo or command ships): retreat when badly damaged, and
@@ -51,7 +51,7 @@ return {
     -- each scan), so it is not a clean withdrawal. Not tested: an ally inside a squad, a full fleet fight.
     AlliedShips = {
         Enabled = true,
-        Interval = 3.0,        -- seconds between scans
+        Interval = 3.0,        -- seconds between checks of each ship
         Retreat = {
             Enabled = true,
             Below = 0.25,        -- health ratio under which an ally pulls back
@@ -73,7 +73,7 @@ return {
     -- ON by default. Tested in the game (2026-11-14): stages, one write each, re-applied after a recalculation, restored on repair.
     ShipDamage = {
         Enabled = true,
-        Interval = 3.0,   -- seconds between scans
+        Interval = 3.0,   -- seconds between checks of each ship
         Enemies = true,
         Allies = true,
         -- Below = health ratio under which the stage applies; Speed, Turn, Shield = multipliers (1 = unchanged).

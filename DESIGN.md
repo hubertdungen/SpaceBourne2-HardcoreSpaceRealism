@@ -12,9 +12,10 @@ tried in the game), **unknown**.
 - UE4SS 3.0.1: no `LoopAsync`, `ExecuteWithDelay` or `ExecuteAsync` (they race and crash the game).
   Timed work runs on the shared `gametick.lua` 1.1, pumped from the player's HUD draw. Copy it unchanged.
 - No per-frame calls to functions with out-parameters (they leak in the UE4SS registry). Scans
-  (`FindAllOf`) only on the timer, never in a hook, and (0.4.1) never while the player is not in a ship: `FindAllOf` walks the
-  whole object array (50 to 70 ms), a 3 s timer scan on foot was a visible hitch (user report 2026-11-16). One shared ship scan
-  (`shiputil.frigates()`, nil on foot) serves doctrine, hull and allies; the pod timer is offset 1.25 s against it.
+  (`FindAllOf`) on a repeating timer or in a hook: 0.4.1 has no repeating scan at all (a 3 s `FindAllOf` was a visible hitch,
+  user report 2026-11-16). `registry.lua`: ships (`Base_Frigate_C`) and pods (`MasterPod_C`) report themselves from
+  `ReceiveBeginPlay` (and the ship's own 1 s timer event `CustomEvent_4`, the `BehSelectTimer` of `Base_Frigate`), the
+  modules take a few ships per 0.5 s call, nothing runs on foot. One `FindAllOf` per class, once, when the class is first hooked.
 - Everything is on by default, automatic, with its own switch in `config.lua`; a new part ships OFF until it has
   been tested in the game. All parts were tested on 2026-11-14 (section 8) and ship ON: pod catchers with the faction credit,
   enemy doctrine, ship damage, allied retreat (the shared target stays off).
@@ -79,8 +80,7 @@ check in the game: which wins when `mods.txt` says `: 0` and an `enabled.txt` ex
 - Shared target for allies outside a squad: `Master_Enemy:SetOrderAttackTargetFromTacticMap(Target)` sets
   `MainTarget` and `MainTargetSettedBy Order`.
 - Not read: `Tacticle_Spawn_System`, the faction fleet-battle manager that owns "general" ships.
-- **In the code (`allies.lua`)**: every `Interval` s, on the shared one-second scan of `Base_Frigate_C`
-  (`shiputil.lua`), for each living ally (`AITypes` 1; `ShipType` 0 Frigate, 1 Fly or 12 HeavyFighter; not a creature,
+- **In the code (`allies.lua`)**: every `Interval` s, on the ships of the registry (`registry.lua`), for each living ally (`AITypes` 1; `ShipType` 0 Frigate, 1 Fly or 12 HeavyFighter; not a creature,
   non-combat ship, character shooter or fleet `General?`):
   - **Retreat** uses `Master_Enemy.ReturnToSpawn`, the flag the game itself sets when a ship strays from its
     `SpawnRoot` (3.5 km, 5.5 km when the root is the player, 140 m for a low squad soldier; read in the
@@ -115,7 +115,7 @@ check in the game: which wins when `mods.txt` says `: 0` and an `enabled.txt` ex
   Ship-to-ship collision damage is unverified.
 - Defaults of `Base_Frigate_C`: `AttackDistMin` 160 m, `AttackDistMax` 840 m, `CloseTrueBeheviur` 91 m (x `RangeMultipler`,
   2 against the player's ship), `CloseBoolDistance` 300 m. The pass is only entered below the attack band.
-- **In the code (`doctrine.lua`)**: every `Interval` s, on the shared one-second ship scan (0.4.1; 0.4.0 had its own `FindAllOf("Base_Frigate_C")`); for each living enemy
+- **In the code (`doctrine.lua`)**: every `Interval` s, from the registry (0.4.1; 0.4.0 had its own `FindAllOf("Base_Frigate_C")`); for each living enemy
   (`AITypes` 0, not a creature, non-combat ship or character shooter) of low tier (`Faction` 3 Pirates, or a military
   faction (0 Morthra, 1 Falron, 2 Xeghan) at `Enemy_Rank` <= `LowRank`; never aliens 4, none 5 or the player's own faction 6): `CloseTrueBeheviur = 0` once, and `ShipBaseTurnSpeed x SloppyTurn`, re-applied when
   the game recalculates the ship's stats and replaces our value. Military ranks above `LowRank` are untouched
@@ -136,7 +136,7 @@ check in the game: which wins when `mods.txt` says `: 0` and an `enabled.txt` ex
   (`EngineOff?`, `DisableWeapons?`, thrust and speed multipliers) but which ones `CalculateStats` recomputes is
   unchecked: no player-ship writes before that is read.
 - Do not hook `Damage1` or `ReceiveAnyDamage` (they run per hit): poll on the timer instead.
-- **In the code (`hull.lua`, `shipmods.lua`)**: on the shared ship scan, for living enemy and allied fighters and
+- **In the code (`hull.lua`, `shipmods.lua`)**: on the ships of the registry, for living enemy and allied fighters and
   frigates (`shiputil.kind`: `ShipType` 0, 1 or 12, not aliens, creatures, non-combat, shooters, generals), health =
   `(CurrentArmor + CurrentShield) / (MaxArmor + MaxShield)` (skipped while the maxima are 0). Stages from
   `ShipDamage.Stages` (default below 66 %: speed and turn x0.85; below 50 %: and shield recharge x0.5; below 33 %: speed

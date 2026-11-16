@@ -2,24 +2,28 @@
 
 ## 0.4.1
 
-**Fixed: a short frame drop every 3 seconds on foot.** A user report (2026-11-16, walking through a station interior with the whole
-realism set installed) described "roughly every 3 seconds an intense frame drop, a split second long". The cause was in this
-mod: the enemy doctrine, the ship damage and the allied ships timers all run every 3 s, and each started a `FindAllOf("Base_Frigate_C")`
-(doctrine its own, the other two a shared one), so two scans of the whole object array ran in the same frame, whether you were in a ship
-or not; the pod catchers added a `FindAllOf` of the pods every 2.5 s on top. `FindAllOf` walks the whole object array of the game
-(50 to 70 ms measured by other mods).
+**Fixed: a short frame drop every 3 seconds, on foot and in space.** A user report (2026-11-16, walking through a station interior with
+the whole realism set installed): "roughly every 3 seconds an intense frame drop, a split second long". The cause was in this mod: the
+enemy doctrine, the ship damage and the allied ships timers all run every 3 s, and each started a `FindAllOf("Base_Frigate_C")` (doctrine
+its own, the other two a shared one), so two scans of the whole object array ran in the same frame, in a ship or not; the pod catchers
+added a `FindAllOf` of the pods every 2.5 s. `FindAllOf` walks the whole object array of the game (50 to 70 ms measured by other mods,
+more in a big world).
 
-- Nothing is scanned while you are not in a ship (on foot, in a station, on a planet): the doctrine, ship damage, allied ships and
-  pod catcher timers return at once. The ships' records are kept, so nothing is applied twice when you are back in your ship (the
-  next scan applies whatever is due).
-- In a ship the doctrine now uses the same one-second ship scan as ship damage and the allied ships (one `FindAllOf` per 3 s
-  instead of two), and the pod catchers' timer starts 1.25 s later so its scan never falls in the same frame as the ship scan.
-- The player controller is looked up once and kept (it was looked up with `FindFirstOf` on every pod tick and every allied ships tick).
-- Same behaviour otherwise: the same ships, the same writes. What changes: allied ships do not retreat and pod catchers do not
-  pick up pods while you are on foot (before, a pod waited its grace window while you were away; now the clock starts when you
-  are back in your ship).
-- Still there in a ship: one ship scan every 3 s. A registry fed by the ships' own BeginPlay would remove it, but that needs a
-  game test first, so it is not in this version.
+- **No scan on any timer any more.** A new `registry.lua` keeps the list of ships and rescue pods without searching: each
+  fighter / frigate (`Base_Frigate_C`) and each pod (`MasterPod_C`) reports itself from the game's own `ReceiveBeginPlay`, and
+  a ship also from its own 1 s behaviour timer (`CustomEvent_4`, a table lookup per ship per second). Nothing runs per frame.
+  Entries are dropped when the object is gone.
+- **The work is spread out.** The doctrine, ship damage and allied ships each run every 0.5 s (offset from each other) and handle a
+  few ships per call, so that every ship is visited about once per `Interval` (3 s) and no frame handles them all. The
+  pod catchers read the (few) pods and the ship list without a search.
+- **On foot nothing runs** (the timers return at once; the controller is found once and kept, not with `FindFirstOf` every time).
+- The one search left: the first time a class is hooked (after a load, once its class exists) ONE `FindAllOf` finds the ships that were
+  already there, from a timer job half a second later, not from the hook. A class that is not loaded yet is tried again at
+  the next possession (and 3 times, 10 s apart).
+- Same behaviour otherwise: the same ships, the same writes. What changes: allied ships do not retreat and pod catchers do not pick
+  up pods while you are on foot (a pod's grace clock starts when you are back in your ship), and the pod catchers' allies are
+  the fighters and frigates (as for the other parts), not bombers or drones.
+- If a hook cannot be installed, `hardcorespacerealism.log` (Debug) and the UE4SS log say so and that part stays idle; nothing falls back to a scan.
 
 ## 0.4.0 (not released yet)
 

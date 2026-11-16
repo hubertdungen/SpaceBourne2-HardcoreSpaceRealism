@@ -21,11 +21,11 @@
       call the Faction Power mod uses) and the pod is removed. Your captive slots are not used and not needed.
 
   Not done in either mode when: the mothership perk is on (it already takes every free pod), the pod is not
-  started yet or already being caught. Cost: one FindAllOf per tick; the ship scan only runs while a pod is
-  past its grace window.
+  started yet or already being caught. Cost: no scan (0.4.1): the pods and the ships come from registry.lua; nothing at all while you are not in a ship.
 ]]
 
 local U = require("shiputil")
+local Reg = require("registry")
 
 local P = {}
 
@@ -122,8 +122,8 @@ function P.start(GT, cfg, log, warn)
         -- take pods for a ship pilot, and the pods' grace clocks start when the player is back in the ship
         local ship = playerShip()
         if not ship then return end
-        local pods = FindAllOf(POD)
-        if not pods or #pods == 0 then firstSeen = {}; return end
+        local pods = Reg.objs("pods")
+        if #pods == 0 then firstSeen = {}; return end
         for name, t in pairs(done) do if t0 - t > REMEMBER then done[name] = nil end end
         local free, seen = {}, {}
         for _, pod in ipairs(pods) do
@@ -163,8 +163,7 @@ function P.start(GT, cfg, log, warn)
 
         local pl = loc(ship)
         if not pl then return end
-        local allies = FindAllOf(ALLY_SHIP)
-        if not allies then return end
+        local allies = Reg.objs("ships")   -- fighters and frigates (Base_Frigate_C), the ships the other modules handle
         local live = {}
         for _, a in ipairs(allies) do
             if alive(a) and prop(a, "AITypes", -1) == AI_ALLY and prop(a, "Dead?", false) ~= true then

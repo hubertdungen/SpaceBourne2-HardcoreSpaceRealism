@@ -13,10 +13,12 @@
   the stage's threshold + 5 % to step down. A value the game rewrites (new CalculateStats) is taken as the new
   base and the stage is applied again to it.
   Not touched: the player's ship, aliens, civilians, cargo, drones, capital ships, fleet generals (shiputil.kind).
-  No hooks (Damage1 / ReceiveAnyDamage run per hit): the ratio is polled on the timer. Not locational.
+  No hooks on damage (Damage1 / ReceiveAnyDamage run per hit): the ratio is polled on the timer, a few ships per call from
+  registry.lua (no scan; nothing on foot). Not locational.
 ]]
 local U = require("shiputil")
 local Mods = require("shipmods")
+local Reg = require("registry")
 
 local H = {}
 local HYST = 0.05
@@ -62,54 +64,50 @@ function H.start(GT, cfg, log, warn)
         return cur
     end
 
-    local lastCount = -1
-    local function tick()
-        local ships = U.frigates()
-        if not ships then return end   -- on foot: no scan, records kept
-        local cur, n = {}, 0
-        for _, s in ipairs(ships) do
-            local kind = U.kind(s)
-            if (kind == "enemy" and enemiesOn) or (kind == "ally" and alliesOn) then
-                local name = U.fullName(s)
-                local h = name and U.health(s)
-                if h then
-                    cur[name] = true
-                    n = n + 1
-                    local rec = recs[name]
-                    if not rec then rec = { stage = 0 }; recs[name] = rec end
-                    local new = stageFor(h, rec.stage)
-                    local changed = new ~= rec.stage
-                    rec.stage = new
-                    -- ships never damaged are never touched; a ship that has a stage is re-checked every scan so
-                    -- that a value the game rewrote is put back (shipmods keeps the game's value as the base)
-                    if new > 0 or rec.applied then
-                        local sg = stages[new]
-                        local f = sg and { Speed = sg.Speed, Turn = sg.Turn, Shield = sg.Shield } or {}
-                        local did = Mods.apply(s, name, "hull", f)
-                        rec.applied = true
-                        if did ~= "" or changed then
-                            if changed then changes = changes + 1 end
-                            log(string.format("hull %s (%s) at %.0f %%: stage %d%s", U.shortName(name), kind, h * 100, new,
-                                did ~= "" and (": " .. did) or ""))
-                        end
-                    end
-                end
+    local lastCount, nrec = -1, 0
+    local function forgetShip(name)
+        if recs[name] then recs[name] = nil; nrec = nrec - 1; Mods.forget(name) end
+    end
+    local function one(s, name)
+        local kind = U.kind(s)
+        local h = ((kind == "enemy" and enemiesOn) or (kind == "ally" and alliesOn)) and U.health(s) or nil
+        if not h then forgetShip(name); return end
+        local rec = recs[name]
+        if not rec then rec = { stage = 0 }; recs[name] = rec; nrec = nrec + 1 end
+        local new = stageFor(h, rec.stage)
+        local changed = new ~= rec.stage
+        rec.stage = new
+        -- ships never damaged are never touched; a ship that has a stage is re-checked every scan so
+        -- that a value the game rewrote is put back (shipmods keeps the game's value as the base)
+        if new > 0 or rec.applied then
+            local sg = stages[new]
+            local f = sg and { Speed = sg.Speed, Turn = sg.Turn, Shield = sg.Shield } or {}
+            local did = Mods.apply(s, name, "hull", f)
+            rec.applied = true
+            if did ~= "" or changed then
+                if changed then changes = changes + 1 end
+                log(string.format("hull %s (%s) at %.0f %%: stage %d%s", U.shortName(name), kind, h * 100, new,
+                    did ~= "" and (": " .. did) or ""))
             end
         end
-        for name in pairs(recs) do
-            if not cur[name] then recs[name] = nil; Mods.forget(name) end
-        end
-        if n ~= lastCount then
-            lastCount = n
-            log(string.format("hull states: %d ships watched, %d stage changes so far", n, changes))
+    end
+    Reg.onDrop(function(k, e) if k == "ships" and e.name then forgetShip(e.name) end end)
+
+    local interval = math.max(1, tonumber(cfg.Interval) or 3)
+    local cursor = {}
+    local function tick()
+        if not Reg.inShip() then return end
+        Reg.slice("ships", cursor, interval, one)
+        if nrec ~= lastCount then
+            lastCount = nrec
+            log(string.format("hull states: %d ships watched, %d stage changes so far", nrec, changes))
         end
     end
 
-    local interval = math.max(1, tonumber(cfg.Interval) or 3)
-    GT.every(interval, function()
+    GT.every(Reg.SLICE, function()
         local ok, err = pcall(tick)
         if not ok then warn("hull tick: " .. tostring(err)) end
-    end)
+    end, 0.2)
     local parts = {}
     for i, sg in ipairs(stages) do
         parts[#parts + 1] = string.format("<%.0f%%: speed x%.2f turn x%.2f shield x%.2f", sg.Below * 100, sg.Speed, sg.Turn, sg.Shield)
