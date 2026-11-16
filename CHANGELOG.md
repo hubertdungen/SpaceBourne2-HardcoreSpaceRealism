@@ -23,6 +23,8 @@ more in a big world).
 - Same behaviour otherwise: the same ships, the same writes. What changes: allied ships do not retreat and pod catchers do not pick
   up pods while you are on foot (a pod's grace clock starts when you are back in your ship), and the pod catchers' allies are
   the fighters and frigates (as for the other parts), not bombers or drones.
+- The hooks are checked at every possession against the functions' addresses and put on again if a class was loaded again (a level change),
+  with one more search of what already exists (offline-checked; not yet seen in the game).
 - If a hook cannot be installed, `hardcorespacerealism.log` (Debug) and the UE4SS log say so and that part stays idle; nothing falls back to a scan.
 
 ## 0.4.0 (not released yet)

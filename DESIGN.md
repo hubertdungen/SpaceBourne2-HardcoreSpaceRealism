@@ -213,3 +213,30 @@ scripted ships. Launch 1 ran the 0.1 to 0.4 list, launches 2 and 3 repeated what
 What stays open: a decisive retreat (maybe `TryToGetBack?`, which the AI uses itself after five chase passes), a squad ally, the
 rank 4 flight control, a real fleet fight, and whether the near-standstill of far ships is the game's own optimization layers
 (`OpLayerIndex`, `CheapModeON?`, read in the Blueprint) or the window losing focus.
+
+## 9. Frame-time test of 0.4.1 (2026-11-16, two launches: the full mod set the user plays with, HSR on, then HSR off)
+
+Probe: frame times from the player's HUD draw (one call per frame), same probe and same scenes in both launches; test copy of the
+build with Debug on and a 15 s logger of the registry and gametick numbers. Scenes: space idle (30 s), a fleet fight (14 enemy
+and 6 allied frigates, 60 s), a rescue pod and an allied frigate (25 s), then a second save loaded in the same game: on foot (60 s).
+Not the station interior of the user's report: the foot save is the test slot's start place.
+
+| Phase (HSR on / off) | avg ms | p99 ms | p99.9 ms | worst 3 frames, ms | frames >50 ms |
+|---|---|---|---|---|---|
+| space idle | 8.62 / 8.69 | 13 / 13 | 65 / 67 | 75 74 67 / 80 76 72 | 16 / 15 |
+| fleet fight | 8.84 / 9.02 | 14 / 15 | 65 / 69 | 100 71 68 / 81 77 75 | 29 / 31 |
+| pod phase | 8.63 / 8.83 | 13 / 14 | 67 / 72 | 70 68 68 / 84 80 72 | 13 / 12 |
+| on foot | 16.54 / 16.67 | 30 / 31 | 55 / 51 | 73 63 56 / 67 57 54 | 4 / 4 |
+
+- HSR's own work: the registry and gametick log (every 15 s) shows the jobs at 1 to 3 ms at most per pump, in the fight and on foot; the
+  only larger pump is the load (two one-off searches of 52 ms each, 0 ships found at that time).
+- A periodic hitch of 65 to 80 ms every 2.0 to 2.25 s is in space with HSR OFF as well (the same spacing in all three space phases), so it
+  is not HSR: another mod of the set or the game. On foot no periodic pattern shows in either launch (many frames over 25 ms, p99.9 51 to 55 ms).
+- One frame of 100 ms in the fight with HSR on (81 ms off) is the only frame above the off run by more than 12 ms; HSR's jobs never took more than 3 ms
+  in that window, so it is not shown to come from HSR (one sample each).
+- The hooks work: `ReceiveBeginPlay` fired for all 20 spawned ships, `CustomEvent_4` about once a second per ship (1475 calls over the fight
+  and pod phases), the pod registered itself and the ally took it ("picked up a pod 1053 m away: +50 Faction Power"), ship damage and doctrine
+  were not re-measured. After the second save loaded the registry dropped its 22 entries (0 ships, 0 pods on foot).
+- Class lookups at the first possession: `Base_Frigate_C` 41 ms, `MasterPod_C` 10 ms, then the two seeds 52 ms each, all in the load.
+- Not covered: returning to space after the foot load (a reloaded class needs the hooks again; since this test the hooks are checked
+  against the functions' addresses at every possession, offline-checked only), 0.4.0 against 0.4.1 on the same scenes, the station interior.

@@ -24,7 +24,8 @@
   boarding, not a repeating timer. A class that is not loaded yet is tried again only at the next possession
   (ClientRestart: a load, boarding or leaving a ship), never on a timer: a miss costs one ~37 ms lookup and must land in
   a transition, not during play. So if the frigate class loads only later in flight, the ships stay unseen until the next
-  possession (the log shows every attempt and seed with its time and cost).
+  possession (the log shows every attempt and seed with its time and cost). At every possession the hooks are checked
+  against the functions' addresses and put on again if the class was loaded again.
 ]]
 local U = require("shiputil")
 
@@ -143,31 +144,45 @@ end
 local GT, log, warn
 local pending = {}   -- kind -> true: hooked, the existing ones still to be found once
 
+local function hookCallback(kind)
+    return function(self)
+        local okG, o = pcall(self.get, self)
+        if okG and o then add(kind, o) end
+    end
+end
+
+-- Hooks a kind's functions. Called at every possession: a class that is loaded again after a level change is a new object
+-- with new functions (gametick.lua does the same for its drivers), so the hook is put on again when a function's address
+-- is not the one hooked before, and the one-off search runs again for what already exists.
 local function hookKind(kind)
     local k = KINDS[kind]
-    if k.done then return true end
     local t0 = os.clock()
     local okC, cls = pcall(StaticFindObject, k.class)
     local found = okC and cls and cls:IsValid()
     log(string.format("registry: attempt at %.1f s: %s %s (%.1f ms)", t0, k.short, found and "loaded" or "not loaded yet",
         (os.clock() - t0) * 1000))
-    if not found then return false end
-    local all = true
-    k.hooked = k.hooked or {}
+    if not found then k.addrs = nil; return false end   -- not loaded (or unloaded): hooked again when it is back
+    k.addrs = k.addrs or {}
+    local fresh = false
     for _, h in ipairs(k.hooks) do
         local fname, required = h[1], h[2]
-        if not k.hooked[fname] then
-            local ok, err = pcall(RegisterHook, k.class .. ":" .. fname, function(self)
-                local okG, o = pcall(self.get, self)
-                if okG and o then add(kind, o) end
-            end)
-            if ok then k.hooked[fname] = true; log("registry: hooked " .. k.short .. ":" .. fname)
-            elseif required then all = false; warn("registry: could not hook " .. k.short .. ":" .. fname .. ": " .. tostring(err))
+        local path = k.class .. ":" .. fname
+        local okF, fo = pcall(StaticFindObject, path)
+        local a = (okF and fo and fo:IsValid()) and fo:GetAddress() or nil
+        if a and a ~= k.addrs[fname] then
+            local ok, err = pcall(RegisterHook, path, hookCallback(kind))
+            if ok then
+                k.addrs[fname] = a
+                if required then fresh = true end
+                log("registry: hooked " .. k.short .. ":" .. fname)
+            elseif required then warn("registry: could not hook " .. k.short .. ":" .. fname .. ": " .. tostring(err))
             else log("registry: optional hook " .. k.short .. ":" .. fname .. " not available: " .. tostring(err)) end
+        elseif not a then
+            if required then warn("registry: " .. k.short .. ":" .. fname .. " not found") else log("registry: optional " .. fname .. " not found") end
         end
     end
-    if all then k.done = true; pending[kind] = true end
-    return all
+    if fresh then pending[kind] = true end
+    return true
 end
 
 -- the one-off search for what existed before the hook (from a gametick job, never from the hook itself)
@@ -197,10 +212,7 @@ end
 
 --- After each load or possession (ClientRestart): hook the classes that have just become available.
 function R.boot()
-    if not GT then return end
-    local pendingTry = false
-    for kind in pairs(KINDS) do if not KINDS[kind].done then pendingTry = true end end
-    if pendingTry then attempt() end
+    if GT then attempt() end
 end
 
 function R.report()
