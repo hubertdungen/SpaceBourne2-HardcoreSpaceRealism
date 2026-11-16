@@ -16,9 +16,11 @@
   game calculates the ship's stats, so it goes through shipmods.lua (shared with hull.lua): base x multipliers,
   checked again every scan and re-applied if the game changed it.
   Nothing the AI rewrites every cycle (SpeedMultipler, TurnSpeedMultipler, RangeMultipler...) is touched.
-  Cost: one FindAllOf per scan on the gametick timer; a few property reads per ship; writes only when needed.
+  Cost: the shared ship scan (shiputil.lua: one FindAllOf for doctrine, hull and allies together, none on foot);
+  a few property reads per ship; writes only when needed.
 ]]
 local Mods = require("shipmods")
+local U = require("shiputil")
 local D = {}
 
 local SHIP = "Base_Frigate_C"
@@ -67,7 +69,7 @@ function D.start(GT, cfg, log, warn)
     end
 
     local function tick()
-        local ships = FindAllOf(SHIP)
+        local ships = U.frigates()   -- the shared scan; nil on foot: nothing is scanned or touched
         if not ships or #ships == 0 then return end
         local cur = {}
         for _, s in ipairs(ships) do

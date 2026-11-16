@@ -1,7 +1,9 @@
 --[[
-  Helpers shared by the ship modules (allies.lua, hull.lua). Read-only: nothing here writes to the game.
+  Helpers shared by the ship modules (allies.lua, hull.lua, doctrine.lua, podcatch.lua). Read-only: nothing here writes to the game.
   One scan of the fighters and frigates (FindAllOf "Base_Frigate_C") is shared by all modules for one second,
-  so several modules on the same timer cost one scan. Bombers, drones, capital ships, carriers and the
+  so several modules on the same timer cost one scan. 0.4.1: no scan at all while the player is on foot (FindAllOf
+  walks the whole object array, tens of ms, and it was running every 3 s in stations and on planets); the player's
+  controller is looked up once and kept (FindFirstOf walks the array too when nothing matches). Bombers, drones, capital ships, carriers and the
   player's ship are other classes and are never in this list.
 ]]
 local U = {}
@@ -60,10 +62,20 @@ function U.alive(o)
     return true
 end
 
+-- The player controller, found once and kept while it is valid (it survives ship <-> foot; a load makes a new one).
+local pcCache
+function U.controller()
+    if U.valid(pcCache) then return pcCache end
+    pcCache = nil
+    local pc = FindFirstOf(CONTROLLER)
+    if U.valid(pc) then pcCache = pc; return pc end
+    return nil
+end
+
 -- The player's ship: the pawn of the controller (on foot it is a character without a captive list: nil).
 function U.playerShip()
-    local pc = FindFirstOf(CONTROLLER)
-    if not U.valid(pc) then return nil end
+    local pc = U.controller()
+    if not pc then return nil end
     local ok, pawn = pcall(function() return pc.Pawn end)
     if not ok or not U.valid(pawn) then return nil end
     if U.prop(pawn, "Captives", nil) == nil then return nil end
@@ -71,10 +83,13 @@ function U.playerShip()
 end
 
 -- Living fighters and frigates, scanned at most once a second (shared between modules).
+-- nil while the player is not in a ship (on foot, in a menu): no scan, and callers must leave their records alone
+-- (an empty list would make them forget every ship and put their base values back to the modified ones).
 local cache, cacheT = {}, -1e9
 function U.frigates()
     local t = os.clock()
     if t - cacheT < 1.0 then return cache end
+    if not U.playerShip() then return nil end
     local out = {}
     local ok, list = pcall(FindAllOf, SHIP)
     if ok and list then

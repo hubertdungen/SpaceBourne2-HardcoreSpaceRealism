@@ -12,7 +12,9 @@ tried in the game), **unknown**.
 - UE4SS 3.0.1: no `LoopAsync`, `ExecuteWithDelay` or `ExecuteAsync` (they race and crash the game).
   Timed work runs on the shared `gametick.lua` 1.1, pumped from the player's HUD draw. Copy it unchanged.
 - No per-frame calls to functions with out-parameters (they leak in the UE4SS registry). Scans
-  (`FindAllOf`) only on the timer, never in a hook.
+  (`FindAllOf`) only on the timer, never in a hook, and (0.4.1) never while the player is not in a ship: `FindAllOf` walks the
+  whole object array (50 to 70 ms), a 3 s timer scan on foot was a visible hitch (user report 2026-11-16). One shared ship scan
+  (`shiputil.frigates()`, nil on foot) serves doctrine, hull and allies; the pod timer is offset 1.25 s against it.
 - Everything is on by default, automatic, with its own switch in `config.lua`; a new part ships OFF until it has
   been tested in the game. All parts were tested on 2026-11-14 (section 8) and ship ON: pod catchers with the faction credit,
   enemy doctrine, ship damage, allied retreat (the shared target stays off).
@@ -113,7 +115,7 @@ check in the game: which wins when `mods.txt` says `: 0` and an `enabled.txt` ex
   Ship-to-ship collision damage is unverified.
 - Defaults of `Base_Frigate_C`: `AttackDistMin` 160 m, `AttackDistMax` 840 m, `CloseTrueBeheviur` 91 m (x `RangeMultipler`,
   2 against the player's ship), `CloseBoolDistance` 300 m. The pass is only entered below the attack band.
-- **In the code (`doctrine.lua`)**: every `Interval` s, `FindAllOf("Base_Frigate_C")`; for each living enemy
+- **In the code (`doctrine.lua`)**: every `Interval` s, on the shared one-second ship scan (0.4.1; 0.4.0 had its own `FindAllOf("Base_Frigate_C")`); for each living enemy
   (`AITypes` 0, not a creature, non-combat ship or character shooter) of low tier (`Faction` 3 Pirates, or a military
   faction (0 Morthra, 1 Falron, 2 Xeghan) at `Enemy_Rank` <= `LowRank`; never aliens 4, none 5 or the player's own faction 6): `CloseTrueBeheviur = 0` once, and `ShipBaseTurnSpeed x SloppyTurn`, re-applied when
   the game recalculates the ship's stats and replaces our value. Military ranks above `LowRank` are untouched

@@ -96,6 +96,7 @@ function A.start(GT, cfg, log, warn)
     local lastCount = -1
     local function tick()
         local ships = U.frigates()
+        if not ships then return end   -- on foot: no scan, records kept
         local now = os.clock()
         local player = U.playerShip()
         local lt, ltName, pl

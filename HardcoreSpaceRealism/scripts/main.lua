@@ -12,7 +12,7 @@
   Timed work runs on the shared gametick.lua (no LoopAsync / ExecuteWithDelay / ExecuteAsync, see its header).
 ]]
 
-local VERSION = "0.4.0"
+local VERSION = "0.4.1"
 
 -- Folder and log ---------------------------------------------------------------------------------------
 local DIR

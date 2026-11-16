@@ -25,6 +25,8 @@
   past its grace window.
 ]]
 
+local U = require("shiputil")
+
 local P = {}
 
 local POD, ALLY_SHIP, CONTROLLER = "MasterPod_C", "Master_Enemy_C", "Q1Controller_C"
@@ -72,19 +74,15 @@ end
 
 -- Your ship: the pawn of the player controller (FindFirstOf on the ship class also returns other objects of
 -- the class, with no captive list). On foot the pawn is a character, which has no Captives: nothing to do.
+-- (0.4.1: through shiputil, with the controller kept instead of looked up on every call.)
 local function playerShip()
-    local pc = FindFirstOf(CONTROLLER)
-    if not valid(pc) then return nil end
-    local ok, pawn = pcall(function() return pc.Pawn end)
-    if not ok or not valid(pawn) then return nil end
-    if prop(pawn, "Captives", nil) == nil then return nil end
-    return pawn
+    return U.playerShip()
 end
 
 -- Game_Builder (the faction's data and Power), reached through the player controller like the Faction Power mod does.
 local function gameBuilder()
-    local pc = FindFirstOf(CONTROLLER)
-    if not valid(pc) then return nil end
+    local pc = U.controller()
+    if not pc then return nil end
     local b = prop(pc, "GameBuilderRef", nil)
     if valid(b) then return b end
     return nil
@@ -120,6 +118,10 @@ function P.start(GT, cfg, log, warn)
         local fRange2 = ((tonumber(cfg.FactionRange) or 1000) * 100) ^ 2
         local fPower = math.max(1, math.floor(tonumber(cfg.FactionPowerPerPilot) or 50))
         local t0 = os.clock()
+        -- 0.4.1: nothing to do (and no scan of the whole object array) unless the player is in a ship: the allies only
+        -- take pods for a ship pilot, and the pods' grace clocks start when the player is back in the ship
+        local ship = playerShip()
+        if not ship then return end
         local pods = FindAllOf(POD)
         if not pods or #pods == 0 then firstSeen = {}; return end
         for name, t in pairs(done) do if t0 - t > REMEMBER then done[name] = nil end end
@@ -138,8 +140,6 @@ function P.start(GT, cfg, log, warn)
         for name in pairs(firstSeen) do if not seen[name] then firstSeen[name] = nil end end  -- caught, destroyed or no longer free
         if #free == 0 then return end
 
-        local ship = playerShip()
-        if not ship then return end
         if prop(ship, "MoahterPodCathcerActive", false) == true then return end -- the perk takes every free pod
 
         local now = os.clock()
@@ -236,10 +236,11 @@ function P.start(GT, cfg, log, warn)
     end
 
     local interval = math.max(1, cfg.Interval or 2.5)
+    -- first run 1.25 s late: with the 2.5 s period against the 3 s ship scan the two never fall in the same frame
     GT.every(interval, function()
         local ok, err = pcall(tick)
         if not ok then warn("pod catch tick: " .. tostring(err)) end
-    end)
+    end, 1.25)
     if cfg.Credit == "faction" then
         log(string.format("pod catchers on (faction credit): ally within %d m picks a pod up after %.0f s, +%d Faction Power, every %.1f s",
             cfg.FactionRange or 1000, tonumber(cfg.GraceSeconds) or 8, cfg.FactionPowerPerPilot or 50, interval))

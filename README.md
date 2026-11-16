@@ -7,7 +7,7 @@ A [UE4SS](https://github.com/UE4SS-RE/RE-UE4SS) Lua mod: the space counterpart o
 Everything is on by default, automatic, with no keys and no menus. Part of the SpaceBourne 2 realism set.
 
 <!-- nexus:skip -->
-> **Status: 0.4.0.** Everything is **on by default**: the ally pod catchers (with a grace window, the pilot credited to your
+> **Status: 0.4.1.** Everything is **on by default**: the ally pod catchers (with a grace window, the pilot credited to your
 > faction), the enemy doctrine, the allied retreat and the ship damage. Each has its own switch in `config.lua`. All of it was
 > checked in the game on 2026-11-14 with scripted ships. **Not tested:** an allied ship inside a squad and a full fleet fight.
 > The allied retreat is not a clean withdrawal (see below). The shared target is off. [DESIGN.md](DESIGN.md) has the research

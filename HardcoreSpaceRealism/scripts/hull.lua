@@ -65,6 +65,7 @@ function H.start(GT, cfg, log, warn)
     local lastCount = -1
     local function tick()
         local ships = U.frigates()
+        if not ships then return end   -- on foot: no scan, records kept
         local cur, n = {}, 0
         for _, s in ipairs(ships) do
             local kind = U.kind(s)
