@@ -19,7 +19,7 @@ more in a big world).
 - **On foot nothing runs** (the timers return at once; the controller is found once and kept, not with `FindFirstOf` every time).
 - The one search left: the first time a class is hooked (after a load, once its class exists) ONE `FindAllOf` finds the ships that were
   already there, from a timer job half a second later, not from the hook. A class that is not loaded yet is tried again at
-  the next possession (and 3 times, 10 s apart).
+  the next possession only (a load, boarding or leaving a ship; never on a timer, a miss costs a ~37 ms lookup that must fall in a transition).
 - Same behaviour otherwise: the same ships, the same writes. What changes: allied ships do not retreat and pod catchers do not pick
   up pods while you are on foot (a pod's grace clock starts when you are back in your ship), and the pod catchers' allies are
   the fighters and frigates (as for the other parts), not bombers or drones.

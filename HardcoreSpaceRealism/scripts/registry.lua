@@ -21,8 +21,10 @@
 
   The one scan left: when a class is hooked for the first time (the first ClientRestart after its class is loaded) the
   ships that exist already are found with ONE FindAllOf, from a gametick job, not from the hook. That is a load or a ship
-  boarding, not a repeating timer. If a class is not loaded yet it is tried again at the next possession and, at most
-  three times, 10 s after each (a missing class costs one ~37 ms lookup).
+  boarding, not a repeating timer. A class that is not loaded yet is tried again only at the next possession
+  (ClientRestart: a load, boarding or leaving a ship), never on a timer: a miss costs one ~37 ms lookup and must land in
+  a transition, not during play. So if the frigate class loads only later in flight, the ships stay unseen until the next
+  possession (the log shows every attempt and seed with its time and cost).
 ]]
 local U = require("shiputil")
 
@@ -144,8 +146,12 @@ local pending = {}   -- kind -> true: hooked, the existing ones still to be foun
 local function hookKind(kind)
     local k = KINDS[kind]
     if k.done then return true end
+    local t0 = os.clock()
     local okC, cls = pcall(StaticFindObject, k.class)
-    if not okC or not cls or not cls:IsValid() then return false end
+    local found = okC and cls and cls:IsValid()
+    log(string.format("registry: attempt at %.1f s: %s %s (%.1f ms)", t0, k.short, found and "loaded" or "not loaded yet",
+        (os.clock() - t0) * 1000))
+    if not found then return false end
     local all = true
     k.hooked = k.hooked or {}
     for _, h in ipairs(k.hooks) do
@@ -174,15 +180,14 @@ local function seed()
         if ok and list then for _, o in ipairs(list) do if add(kind, o) then n = n + 1 end end end
         local ms = (os.clock() - t0) * 1000
         stats.seeded, stats.seedMs = stats.seeded + n, stats.seedMs + ms
-        log(string.format("registry: found %d existing %s once (%.0f ms)", n, KINDS[kind].short, ms))
+        log(string.format("registry: seed at %.1f s: found %d existing %s with one FindAllOf (%.1f ms)", t0, n, KINDS[kind].short, ms))
     end
 end
 
-local function attempt(left)
-    local missing = false
-    for kind in pairs(KINDS) do if not hookKind(kind) then missing = true end end
+-- Only from R.boot (a possession): no timed retries.
+local function attempt()
+    for kind in pairs(KINDS) do hookKind(kind) end
     if next(pending) then GT.after(0.5, seed) end
-    if missing and left > 0 then GT.after(10, function() attempt(left - 1) end) end
 end
 
 --- init(GT, log, warn): call once at load; then call R.boot() from GT.boot's callback (every load / possession).
@@ -195,7 +200,7 @@ function R.boot()
     if not GT then return end
     local pendingTry = false
     for kind in pairs(KINDS) do if not KINDS[kind].done then pendingTry = true end end
-    if pendingTry then attempt(3) end
+    if pendingTry then attempt() end
 end
 
 function R.report()
