@@ -240,3 +240,25 @@ Not the station interior of the user's report: the foot save is the test slot's 
 - Class lookups at the first possession: `Base_Frigate_C` 41 ms, `MasterPod_C` 10 ms, then the two seeds 52 ms each, all in the load.
 - Not covered: returning to space after the foot load (a reloaded class needs the hooks again; since this test the hooks are checked
   against the functions' addresses at every possession, offline-checked only), 0.4.0 against 0.4.1 on the same scenes, the station interior.
+
+### 9.1 Second test (2026-11-16): 0.4.0 against 0.4.1, each alone with only the dev console (every other set mod off)
+
+The foot save is the HTRTest copy (player at -223873, 4352, -174 in the Holder world, a `Q1_Character_C`); the space save is "Entered New System"
+(a `SR_FighterS1_C`). Second save loaded in the same game, as in 9.
+
+| Phase (0.4.0 / 0.4.1) | avg ms | p99 ms | p99.9 ms | worst 5 frames, ms | frames >50 / >100 ms |
+|---|---|---|---|---|---|
+| on foot, 60 s | 20.85 / 19.28 | 75 / 32 | 189 / 36 | 195 193 189 187 187 / 39 36 36 36 36 | 44 / 20 against 0 / 0 |
+| space idle, 45 s | 8.97 / 8.35 | 11 / 11 | 172 / 13 | 177 174 173 172 172 / 50 17 15 14 13 | 34 / 15 against 1 / 0 (the one frame is the first of the phase) |
+| space, 20-ship fleet, 30 s (0.4.1 only) | - / 8.40 | - / 12 | - / 14 | - / 15 15 15 14 14 | - / 0 |
+
+- 0.4.0 on foot: a frame of 170 to 195 ms exactly every 3.00 s (at 1.60, 4.60, 7.60, 10.60, 13.61, 16.60, 19.59, 22.60, 25.60, 28.60, 31.60, 34.62 s) and
+  one of 66 to 89 ms exactly every 2.5 s (the pod scan: 2.24, 4.73, 7.24, 9.73, 12.25, 14.75 ...). In space the same: 158 to 177 ms every 3 s and 56 to 64 ms
+  every 2.5 s. This is the user's report (the user saw about 50 ms; this world and PC cost more per scan).
+- 0.4.1: no frame over 40 ms on foot, none over 17 ms in space (the 50 ms one is the first frame of the phase), none over 15 ms with the fleet.
+- Hooks after the second load: the classes were not loaded again (the function addresses were the same, `attempt ... loaded (0.0 ms)`, no new hook, no new
+  search), and the 20 spawned ships registered themselves through `ReceiveBeginPlay` (`ships 20, found by the one-off search 0`, about 20 hook calls a
+  second in total from the 1 s timer). The case of a class loaded again (hooks put on again) did not occur and is still checked offline only.
+- First possession: `Base_Frigate_C` lookup 37 ms, `MasterPod_C` 12 ms, the two one-off searches 52 and 49 ms (0 found), all in the load.
+- The 2.0 to 2.25 s hitch of 65 to 80 ms seen with HSR off and the full set (section 9) is absent here with only HSR 0.4.1 and the dev console (space idle worst
+  17 ms, fleet worst 15 ms): it comes from another mod of the set (or their combination), not from the game itself and not from HSR.
