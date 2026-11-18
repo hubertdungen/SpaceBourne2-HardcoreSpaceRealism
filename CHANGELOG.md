@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.4.1
+## 0.4.1 — 2026-11-18
 
 **Fixed: a short frame drop every 3 seconds, on foot and in space.** A user report (2026-11-16, walking through a station interior with
 the whole realism set installed): "roughly every 3 seconds an intense frame drop, a split second long". The cause was in this mod: the
@@ -25,9 +25,14 @@ more in a big world).
   the fighters and frigates (as for the other parts), not bombers or drones.
 - The hooks are checked at every possession against the functions' addresses and put on again if a class was loaded again (a level change),
   with one more search of what already exists (offline-checked; not yet seen in the game).
+- Tested in the game (2026-11-16, four launches, every frame timed): HSR alone on foot, 0.4.0 gave a 170-195 ms frame exactly every
+  3 s and a 66-89 ms one every 2.5 s; 0.4.1 had no frame above 39 ms. In space 0.4.0 gave 158-177 ms every 3 s; 0.4.1 had no frame
+  above 17 ms with 20 ships. With the whole realism set, frame times were the same with HSR on and off (space, a fight of 14 enemy
+  and 6 allied frigates, a rescue pod, on foot). All 20 spawned ships registered themselves; an ally caught a rescue pod (+50 Faction
+  Power). Not seen in the game yet: a class loaded again after a level change.
 - If a hook cannot be installed, `hardcorespacerealism.log` (Debug) and the UE4SS log say so and that part stays idle; nothing falls back to a scan.
 
-## 0.4.0 (not released yet)
+## 0.4.0 — 2026-11-14
 
 **Defaults (the first release is meant to ship like this):** everything is ON: `PodCatchers.Credit = "faction"` (the pilot goes to your
 faction as Faction Power), `EnemyDoctrine`, `ShipDamage` and `AlliedShips` with `Retreat` on and `ShareTarget` off. Not tested in the game: an
